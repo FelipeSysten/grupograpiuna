@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "news": {
+      "title": "Notícia",
+      "description": "Artigos de notícias do portal",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título da notícia" },
+        "content": { "type": "string", "description": "Conteúdo em Markdown" },
+        "category": { "type": "string", "description": "Categoria da notícia" },
+        "author": { "type": "string", "description": "Nome do autor" },
+        "imageUrl": { "type": "string", "description": "URL da imagem de destaque" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" },
+        "featured": { "type": "boolean", "description": "Se a notícia é destaque" }
+      },
+      "required": ["title", "content", "category", "author", "createdAt"]
+    },
+    "tv_schedule": {
+      "title": "Programação TV",
+      "description": "Grade de programação da TV Grapiúna",
+      "type": "object",
+      "properties": {
+        "time": { "type": "string", "description": "Horário (ex: 08:00)" },
+        "title": { "type": "string", "description": "Nome do programa" },
+        "host": { "type": "string", "description": "Apresentador" },
+        "dayOfWeek": { "type": "string", "description": "Dia da semana" }
+      },
+      "required": ["time", "title", "host"]
+    },
+    "ads": {
+      "title": "Publicidade",
+      "description": "Banners de publicidade",
+      "type": "object",
+      "properties": {
+        "size": { "type": "string", "enum": ["leaderboard", "sidebar", "mobile"], "description": "Tamanho do banner" },
+        "imageUrl": { "type": "string", "description": "URL da imagem do anúncio" },
+        "link": { "type": "string", "description": "Link de destino" },
+        "active": { "type": "boolean", "description": "Se o anúncio está ativo" }
+      },
+      "required": ["size", "imageUrl", "active"]
+    },
+    "users": {
+      "title": "Usuário",
+      "description": "Perfil de usuário do sistema",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Nome do usuário" },
+        "email": { "type": "string", "description": "E-mail do usuário" },
+        "role": { "type": "string", "enum": ["admin", "editor"], "description": "Papel no sistema" }
+      },
+      "required": ["name", "email", "role"]
+    },
+    "live_chat": {
+      "title": "Chat Ao Vivo",
+      "description": "Mensagens do chat em tempo real",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "Conteúdo da mensagem" },
+        "userId": { "type": "string", "description": "UID do autor" },
+        "userName": { "type": "string", "description": "Nome do autor" },
+        "userPhoto": { "type": "string", "description": "URL da foto do autor" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de envio" }
+      },
+      "required": ["text", "userId", "userName", "createdAt"]
+    },
+    "hub73": {
+      "title": "Hub73 Portfólio",
+      "description": "Portfólio de projetos do Hub73",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do projeto" },
+        "description": { "type": "string", "description": "Descrição do projeto" },
+        "imageUrl": { "type": "string", "description": "URL da imagem" },
+        "link": { "type": "string", "description": "Link do projeto" },
+        "category": { "type": "string", "description": "Categoria" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["title", "description", "imageUrl", "createdAt"]
+    },
+    "podcasts": {
+      "title": "Podcasts",
+      "description": "Episódios de podcast",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do episódio" },
+        "description": { "type": "string", "description": "Descrição do episódio" },
+        "imageUrl": { "type": "string", "description": "URL da imagem de capa" },
+        "audioUrl": { "type": "string", "description": "URL do áudio" },
+        "youtubeUrl": { "type": "string", "description": "URL do vídeo no YouTube" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
+      },
+      "required": ["title", "description", "imageUrl", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/news/{newsId}": { "schema": "news", "description": "Coleção de notícias" },
+    "/tv_schedule/{scheduleId}": { "schema": "tv_schedule", "description": "Coleção de programação da TV" },
+    "/ads/{adId}": { "schema": "ads", "description": "Coleção de anúncios" },
+    "/users/{userId}": { "schema": "users", "description": "Coleção de usuários" },
+    "/live_chat/{messageId}": { "schema": "live_chat", "description": "Coleção de mensagens do chat ao vivo" },
+    "/hub73/{projectId}": { "schema": "hub73", "description": "Coleção de portfólio do Hub73" },
+    "/podcasts/{podcastId}": { "schema": "podcasts", "description": "Coleção de episódios de podcast" }
+  }
+}

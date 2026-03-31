@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: news
+    // Fields: title, content, category, author, imageUrl, createdAt, featured
+    //
+    // Collection: tv_schedule
+    // Fields: time, title, host, dayOfWeek
+    //
+    // Collection: ads
+    // Fields: size, imageUrl, link, active
+    //
+    // Collection: users
+    // Fields: name, email, role
+    //
+    // Collection: live_chat
+    // Fields: text, userId, userName, userPhoto, createdAt
+    //
+    // Collection: hub73
+    // Fields: title, description, imageUrl, link, category, createdAt
+    //
+    // Collection: podcasts
+    // Fields: title, description, imageUrl, audioUrl, youtubeUrl, createdAt
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "systen3@gmail.com" && request.auth.token.email_verified == true)
+        );
+    }
+
+    function isEditor() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'editor']);
+    }
+
+    function isValidNews(data) {
+      return data.keys().hasAll(['title', 'content', 'category', 'author', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 &&
+             data.category is string &&
+             data.author is string;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['text', 'userId', 'userName', 'createdAt']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 500 &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.createdAt == request.time;
+    }
+
+    function isValidHub73(data) {
+      return data.keys().hasAll(['title', 'description', 'imageUrl', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 &&
+             data.imageUrl is string &&
+             data.createdAt is string;
+    }
+
+    function isValidPodcast(data) {
+      return data.keys().hasAll(['title', 'description', 'imageUrl', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 &&
+             data.imageUrl is string &&
+             data.createdAt is string;
+    }
+
+    // Rules
+    match /news/{newsId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /tv_schedule/{scheduleId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /ads/{adId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /live_chat/{messageId=**} {
+      allow list: if true;
+      allow get: if true;
+      allow create: if isAuthenticated() && isValidChatMessage(request.resource.data);
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
+    }
+
+    match /hub73/{projectId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /podcasts/{podcastId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /users/{userId=**} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
