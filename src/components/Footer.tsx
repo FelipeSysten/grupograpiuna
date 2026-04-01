@@ -58,11 +58,11 @@ export const Footer = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-red-600 shrink-0" />
-                <span>(73) 3333-3333</span>
+                <span>(73) 7398100-4150</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-red-600 shrink-0" />
-                <span>contato@grupograpiuna.com.br</span>
+                <span>contatograpiunatv@gmail.com</span>
               </li>
             </ul>
           </div>
