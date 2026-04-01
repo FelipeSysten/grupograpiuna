@@ -1,13 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Tv, Newspaper, Mic, Video, Info, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Tv, Newspaper, Mic, Video, Info, LayoutDashboard, Eye } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useAuth } from '../hooks/useAuth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [stats, setStats] = useState<any>(null);
   const location = useLocation();
   const { user } = useAuth();
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'site_stats', 'global'), (doc) => {
+      if (doc.exists()) {
+        setStats(doc.data());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const navItems = [
     { name: 'Home', path: '/', icon: Info },
@@ -19,6 +31,25 @@ export const Navbar = () => {
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      {/* Top Stats Bar */}
+      <div className="bg-gray-900 text-white py-1.5 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+          <div className="flex items-center gap-4">
+            <span className="text-red-500">AO VIVO:</span>
+            <span className="animate-pulse flex items-center gap-1">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+              TV GRAPIÚNA ONLINE
+            </span>
+          </div>
+          {stats && (
+            <div className="flex items-center gap-2 text-gray-400">
+              <Eye size={12} className="text-red-500" />
+              <span>{stats.totalAccesses?.toLocaleString('pt-BR')} ACESSOS AO PORTAL</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20">
           <div className="flex items-center">

@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Play, Calendar, Users, MessageSquare, Share2, Send, LogIn } from 'lucide-react';
+import { Play, Calendar, Users, MessageSquare, Share2, Send, LogIn, Youtube, Eye } from 'lucide-react';
 import { AdBanner } from './AdBanner';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, updateDoc, doc, increment } from 'firebase/firestore';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, loginWithGoogle } from '../firebase';
-import { ScheduleItem } from '../types';
+import { ScheduleItem, YouTubeVideo } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const TVPage = () => {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [currentProgram, setCurrentProgram] = useState<ScheduleItem | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   
@@ -17,6 +18,21 @@ export const TVPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const incrementVideoViews = async (video: YouTubeVideo) => {
+    try {
+      await updateDoc(doc(db, 'youtube_videos', video.id), {
+        views: increment(1)
+      });
+    } catch (error) {
+      console.error('Error incrementing video views:', error);
+    }
+  };
+
+  const handleVideoSelect = (video: YouTubeVideo) => {
+    setSelectedVideoId(video.youtubeId);
+    incrementVideoViews(video);
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
@@ -57,6 +73,17 @@ export const TVPage = () => {
           setSelectedVideoId(getYouTubeId(current.youtubeUrl));
         }
       }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'youtube_videos'), orderBy('publishedAt', 'desc'), limit(8));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as YouTubeVideo));
+      setVideos(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'youtube_videos');
     });
     return () => unsubscribe();
   }, []);
@@ -261,6 +288,69 @@ export const TVPage = () => {
                   <div className="h-6 bg-gray-700 rounded w-1/4 mb-2"></div>
                   <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
                   <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+      
+      {/* Recent Videos */}
+      <section className="py-20 bg-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-4">
+              <Youtube size={28} className="text-red-600" />
+              <h2 className="text-3xl font-black uppercase tracking-tighter">Vídeos <span className="text-red-600">Recentes</span></h2>
+            </div>
+            <a 
+              href="https://www.youtube.com/@tv.grapiuna" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+            >
+              Ver todos no YouTube <Share2 size={14} />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {videos.length > 0 ? videos.map((video) => (
+              <motion.button
+                key={video.id}
+                whileHover={{ y: -5 }}
+                onClick={() => handleVideoSelect(video)}
+                className="group text-left"
+              >
+                <div className="relative aspect-video rounded-xl overflow-hidden mb-4 border border-gray-800">
+                  <img 
+                    src={video.thumbnailUrl} 
+                    alt={video.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+                      <Play size={24} fill="white" className="text-white ml-1" />
+                    </div>
+                  </div>
+                </div>
+                <h3 className="font-bold text-gray-100 line-clamp-2 group-hover:text-red-500 transition-colors">
+                  {video.title}
+                </h3>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    {new Date(video.publishedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold">
+                    <Eye size={12} /> {video.views || 0}
+                  </div>
+                </div>
+              </motion.button>
+            )) : (
+              [1, 2, 3, 4].map((n) => (
+                <div key={n} className="space-y-4 animate-pulse">
+                  <div className="aspect-video bg-gray-900 rounded-xl"></div>
+                  <div className="h-4 bg-gray-900 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-900 rounded w-1/4"></div>
                 </div>
               ))
             )}

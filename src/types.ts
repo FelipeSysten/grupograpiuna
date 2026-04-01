@@ -32,3 +32,12 @@ export interface ScheduleItem {
   dayOfWeek: string;
   youtubeUrl?: string;
 }
+
+export interface YouTubeVideo {
+  id: string;
+  title: string;
+  youtubeId: string;
+  thumbnailUrl: string;
+  publishedAt: string;
+  views?: number;
+}

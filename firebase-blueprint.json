@@ -90,6 +90,28 @@
         "createdAt": { "type": "string", "format": "date-time", "description": "Data de criação" }
       },
       "required": ["title", "description", "imageUrl", "createdAt"]
+    },
+    "youtube_videos": {
+      "title": "Vídeos do YouTube",
+      "description": "Vídeos recentes do canal do YouTube",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Título do vídeo" },
+        "youtubeId": { "type": "string", "description": "ID do vídeo no YouTube" },
+        "thumbnailUrl": { "type": "string", "description": "URL da miniatura" },
+        "publishedAt": { "type": "string", "format": "date-time", "description": "Data de publicação" },
+        "views": { "type": "integer", "description": "Número de visualizações no site" }
+      },
+      "required": ["title", "youtubeId", "publishedAt"]
+    },
+    "site_stats": {
+      "title": "Estatísticas do Site",
+      "description": "Contadores globais de acesso",
+      "type": "object",
+      "properties": {
+        "totalAccesses": { "type": "integer", "description": "Total de acessos ao site" }
+      },
+      "required": ["totalAccesses"]
     }
   },
   "firestore": {
@@ -99,6 +121,8 @@
     "/users/{userId}": { "schema": "users", "description": "Coleção de usuários" },
     "/live_chat/{messageId}": { "schema": "live_chat", "description": "Coleção de mensagens do chat ao vivo" },
     "/hub73/{projectId}": { "schema": "hub73", "description": "Coleção de portfólio do Hub73" },
-    "/podcasts/{podcastId}": { "schema": "podcasts", "description": "Coleção de episódios de podcast" }
+    "/podcasts/{podcastId}": { "schema": "podcasts", "description": "Coleção de episódios de podcast" },
+    "/youtube_videos/{videoId}": { "schema": "youtube_videos", "description": "Coleção de vídeos do YouTube" },
+    "/site_stats/{statId}": { "schema": "site_stats", "description": "Coleção de estatísticas globais" }
   }
 }

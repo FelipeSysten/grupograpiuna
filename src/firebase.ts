@@ -8,7 +8,18 @@ export const auth = getAuth(app);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 
-export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const loginWithGoogle = async () => {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch (error: any) {
+    console.error("Erro ao entrar com Google:", error);
+    if (error.code === 'auth/unauthorized-domain') {
+      alert(`Domínio não autorizado! Você precisa adicionar o domínio do Vercel no Console do Firebase (Autenticação > Configurações > Domínios Autorizados).`);
+    } else {
+      alert(`Erro ao entrar: ${error.message}`);
+    }
+  }
+};
 export const logout = () => signOut(auth);
 
 // Connection test

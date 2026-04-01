@@ -26,6 +26,12 @@ service cloud.firestore {
     // Collection: podcasts
     // Fields: title, description, imageUrl, audioUrl, youtubeUrl, createdAt
     //
+    // Collection: youtube_videos
+    // Fields: title, youtubeId, thumbnailUrl, publishedAt, views
+    //
+    // Collection: site_stats
+    // Fields: totalAccesses
+    //
     // ===============================================================
 
     // Helper Functions
@@ -114,6 +120,22 @@ service cloud.firestore {
     match /podcasts/{podcastId=**} {
       allow read: if true;
       allow create, update, delete: if isAdmin() || isEditor();
+    }
+    
+    match /youtube_videos/{videoId=**} {
+      allow read: if true;
+      allow create, delete: if isAdmin() || isEditor();
+      allow update: if isAdmin() || isEditor() || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']) &&
+         request.resource.data.views == resource.data.views + 1);
+    }
+
+    match /site_stats/{statId=**} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() || 
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalAccesses']) &&
+         request.resource.data.totalAccesses == resource.data.totalAccesses + 1);
     }
 
     match /users/{userId=**} {

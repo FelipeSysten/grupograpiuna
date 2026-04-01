@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Play, ArrowRight, Tv, Newspaper, Mic, Video } from 'lucide-react';
+import { Play, ArrowRight, Tv, Newspaper, Mic, Video, Youtube, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdBanner } from './AdBanner';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
+import { YouTubeVideo } from '../types';
 
 export const Home = () => {
   const [latestNews, setLatestNews] = useState<any[]>([]);
+  const [latestVideos, setLatestVideos] = useState<YouTubeVideo[]>([]);
+
+  const incrementVideoViews = async (video: YouTubeVideo) => {
+    try {
+      await updateDoc(doc(db, 'youtube_videos', video.id), {
+        views: increment(1)
+      });
+    } catch (error) {
+      console.error('Error incrementing video views:', error);
+    }
+  };
 
   useEffect(() => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(3));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setLatestNews(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'youtube_videos'), orderBy('publishedAt', 'desc'), limit(4));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setLatestVideos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as YouTubeVideo)));
     });
     return () => unsubscribe();
   }, []);
@@ -136,6 +156,65 @@ export const Home = () => {
                   <div className="bg-gray-200 aspect-video rounded-xl mb-4"></div>
                   <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
                   <div className="h-4 bg-gray-200 rounded w-full"></div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* YouTube Videos Section */}
+      <section className="py-20 bg-gray-950 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3">
+                <Youtube size={32} className="text-red-600" /> TV <span className="text-red-600">Grapiúna</span>
+              </h2>
+              <div className="h-1 w-20 bg-red-600 mt-2"></div>
+            </div>
+            <Link to="/tv" className="text-gray-400 font-bold text-sm hover:text-red-600 transition-colors">VER TODOS</Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {latestVideos.length > 0 ? latestVideos.map((video) => (
+              <Link 
+                to="/tv" 
+                key={video.id} 
+                className="group cursor-pointer"
+                onClick={() => incrementVideoViews(video)}
+              >
+                <div className="relative overflow-hidden rounded-xl mb-4 aspect-video border border-gray-800">
+                  <img 
+                    src={video.thumbnailUrl} 
+                    alt={video.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+                      <Play size={24} fill="white" className="text-white ml-1" />
+                    </div>
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold leading-tight group-hover:text-red-600 transition-colors mb-2 line-clamp-2">
+                  {video.title}
+                </h3>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                    {new Date(video.publishedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold">
+                    <Eye size={12} /> {video.views || 0}
+                  </div>
+                </div>
+              </Link>
+            )) : (
+              [1, 2, 3, 4].map((n) => (
+                <div key={n} className="animate-pulse">
+                  <div className="bg-gray-900 aspect-video rounded-xl mb-4"></div>
+                  <div className="h-5 bg-gray-900 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-900 rounded w-1/4"></div>
                 </div>
               ))
             )}

@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { loginWithGoogle, logout } from '../firebase';
-import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube } from 'lucide-react';
 import { AdminNews } from './AdminNews';
 import { AdminSchedule } from './AdminSchedule';
 import { AdminAds } from './AdminAds';
 import { AdminHub73 } from './AdminHub73';
 import { AdminPodcasts } from './AdminPodcasts';
+import { AdminVideos } from './AdminVideos';
 
 export const AdminDashboard = () => {
   const { user, role, loading, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts'>('news');
+  const [activeTab, setActiveTab] = useState<'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos'>('news');
 
   if (loading) {
     return (
@@ -68,6 +69,7 @@ export const AdminDashboard = () => {
             { id: 'ads', label: 'Publicidade', icon: ImageIcon },
             { id: 'hub73', label: 'Hub73', icon: Briefcase },
             { id: 'podcasts', label: 'Podcasts', icon: Mic },
+            { id: 'videos', label: 'Vídeos YT', icon: Youtube },
           ].map((item) => (
             <button
               key={item.id}
@@ -112,6 +114,7 @@ export const AdminDashboard = () => {
           {activeTab === 'ads' && <AdminAds />}
           {activeTab === 'hub73' && <AdminHub73 />}
           {activeTab === 'podcasts' && <AdminPodcasts />}
+          {activeTab === 'videos' && <AdminVideos />}
         </div>
       </main>
     </div>
