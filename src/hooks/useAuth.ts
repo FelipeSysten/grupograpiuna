@@ -17,8 +17,8 @@ export function useAuth() {
         if (userDoc.exists()) {
           setRole(userDoc.data().role);
         } else {
-          // Default role for the first user (if it's the admin email)
-          if (currentUser.email === 'systen3@gmail.com') {
+          // Default role for the first users (if it's the admin email)
+          if (currentUser.email === 'systen3@gmail.com' || currentUser.email === 'contatograpiunatv@gmail.com') {
             setRole('admin');
           } else {
             setRole('user');
