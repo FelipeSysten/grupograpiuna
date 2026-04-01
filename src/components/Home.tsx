@@ -43,10 +43,9 @@ export const Home = () => {
       <section className="relative h-[80vh] flex items-center justify-center overflow-hidden bg-black">
         <div className="absolute inset-0 opacity-60">
           <img 
-            src="https://picsum.photos/seed/studio/1920/1080" 
-            alt="Studio" 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
+            src="/assets/home.png" // Caminho atualizado
+      alt="Studio" 
+      className="w-full h-full object-cover"
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40"></div>

@@ -54,11 +54,12 @@ export const Navbar = () => {
         <div className="flex justify-between h-20">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center gap-2">
-              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">G</div>
-              <span className="font-bold text-xl tracking-tighter text-gray-900 hidden sm:block">
-                GRUPO <span className="text-red-600">GRAPIÚNA</span>
-              </span>
-            </Link>
+  <img 
+    src="/assets/grupograpiuna.png" 
+    alt="Grupo Grapiúna" 
+    className="h-12 w-auto object-contain"
+  />
+</Link>
           </div>
           
           <div className="hidden md:flex items-center space-x-8">

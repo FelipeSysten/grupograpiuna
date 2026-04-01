@@ -8,12 +8,14 @@ export const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">G</div>
-              <span className="font-bold text-xl tracking-tighter text-white">
-                GRUPO <span className="text-red-600">GRAPIÚNA</span>
-              </span>
-            </div>
+          <div className="flex items-center gap-2 mb-6">
+  <img 
+    src="/assets/grupograpiuna.png" 
+    alt="Grupo Grapiúna" 
+    className="h-12 w-auto object-contain" // Removido brightness-0 invert
+  />
+</div>
+
             <p className="text-sm leading-relaxed mb-6">
               O maior grupo de comunicação do Sul da Bahia. Informação com credibilidade, entretenimento de qualidade e soluções audiovisuais completas.
             </p>
