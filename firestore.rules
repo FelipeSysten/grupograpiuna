@@ -134,8 +134,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin();
       allow update: if isAdmin() || 
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalAccesses']) &&
-         request.resource.data.totalAccesses == resource.data.totalAccesses + 1);
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['totalAccesses', 'pageViews', 'dailyStats', 'deviceStats']));
     }
 
     match /users/{userId=**} {

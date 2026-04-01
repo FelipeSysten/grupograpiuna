@@ -106,10 +106,13 @@
     },
     "site_stats": {
       "title": "Estatísticas do Site",
-      "description": "Contadores globais de acesso",
+      "description": "Contadores globais e detalhados de acesso",
       "type": "object",
       "properties": {
-        "totalAccesses": { "type": "integer", "description": "Total de acessos ao site" }
+        "totalAccesses": { "type": "integer", "description": "Total de acessos ao site" },
+        "pageViews": { "type": "object", "description": "Visualizações por página (path: count)" },
+        "dailyStats": { "type": "object", "description": "Acessos por dia (YYYY-MM-DD: count)" },
+        "deviceStats": { "type": "object", "description": "Acessos por dispositivo (mobile/desktop: count)" }
       },
       "required": ["totalAccesses"]
     }

@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { loginWithGoogle, logout } from '../firebase';
-import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube, BarChart3 } from 'lucide-react';
 import { AdminNews } from './AdminNews';
 import { AdminSchedule } from './AdminSchedule';
 import { AdminAds } from './AdminAds';
 import { AdminHub73 } from './AdminHub73';
 import { AdminPodcasts } from './AdminPodcasts';
 import { AdminVideos } from './AdminVideos';
+import { AdminAnalytics } from './AdminAnalytics';
 
 export const AdminDashboard = () => {
   const { user, role, loading, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos'>('news');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos'>('analytics');
 
   if (loading) {
     return (
@@ -64,6 +65,7 @@ export const AdminDashboard = () => {
 
         <nav className="flex-1 space-y-2">
           {[
+            { id: 'analytics', label: 'Audiência', icon: BarChart3 },
             { id: 'news', label: 'Notícias', icon: Newspaper },
             { id: 'schedule', label: 'TV Grade', icon: Tv },
             { id: 'ads', label: 'Publicidade', icon: ImageIcon },
@@ -109,6 +111,7 @@ export const AdminDashboard = () => {
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-12 overflow-y-auto">
         <div className="max-w-5xl mx-auto">
+          {activeTab === 'analytics' && <AdminAnalytics />}
           {activeTab === 'news' && <AdminNews />}
           {activeTab === 'schedule' && <AdminSchedule />}
           {activeTab === 'ads' && <AdminAds />}
