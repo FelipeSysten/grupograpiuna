@@ -34,7 +34,7 @@ export const Hub73Page = () => {
       <section className="bg-gray-900 text-white py-24 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <img 
-            src="https://picsum.photos/seed/production/1920/1080" 
+            src="/assets/pagehub73.png" 
             alt="Production" 
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
@@ -42,15 +42,19 @@ export const Hub73Page = () => {
         </div>
         <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-block bg-red-600 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6"
-          >
-            HUB73 PRODUTORA
-          </motion.div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 uppercase">
-            Transformamos Ideias em <span className="text-red-600">Impacto Visual</span>
-          </h1>
+  initial={{ opacity: 0, scale: 0.9 }}
+  animate={{ opacity: 1, scale: 1 }}
+  className="mb-8 flex justify-center"
+>
+  <img 
+    src="/assets/hub73.png" 
+    alt="HUB73 PRODUTORA" 
+    className="h-20 md:h-28 w-auto object-contain" 
+  />
+</motion.div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 uppercase">
+      Transformamos Ideias em <span className="text-[#00A859]">Impacto Social</span>
+    </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-12">
             A produtora oficial do Grupo Grapiúna. Especialistas em comerciais, podcasts, institucionais e cobertura de eventos.
           </p>
