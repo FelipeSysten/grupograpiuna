@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import React, { useEffect } from 'react';
 import { doc, setDoc, increment } from 'firebase/firestore';
 import { db } from './firebase';
+import { Analytics } from '@vercel/analytics/react';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { Home } from './components/Home';
@@ -74,6 +75,7 @@ export default function App() {
           <AdBanner size="mobile" />
         </div>
       </div>
+      <Analytics />
     </Router>
   );
 }
