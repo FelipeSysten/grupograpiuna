@@ -23,7 +23,7 @@ export const Navbar = () => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Info },
-    { name: 'TV Grapiúna', path: '/tv', icon: Tv },
+    { name: 'Eventos ao Vivo', path: '/tv', icon: Tv },
     { name: 'Notícias', path: '/noticias', icon: Newspaper },
     { name: 'HUB73', path: '/hub73', icon: Video },
     { name: 'Podcasts', path: '/podcasts', icon: Mic },
@@ -36,9 +36,9 @@ export const Navbar = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
           <div className="flex items-center gap-4">
             <span className="text-red-500">AO VIVO:</span>
-            <span className="animate-pulse flex items-center gap-1">
+              <span className="animate-pulse flex items-center gap-1">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-              TV GRAPIÚNA ONLINE
+              EVENTOS AO VIVO
             </span>
           </div>
           {stats && (

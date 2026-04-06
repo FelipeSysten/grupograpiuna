@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Plus, Trash2, Edit2, X, Check, Search, Mic } from 'lucide-react';
+import { ImageUploadField } from './ImageUploadField';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const AdminPodcasts = () => {
@@ -134,12 +135,11 @@ export const AdminPodcasts = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase text-gray-400 mb-2">URL da Capa</label>
-                  <input 
-                    required
+                  <ImageUploadField 
+                    label="Capa do Podcast"
                     value={formData.imageUrl}
-                    onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                    type="url" className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-600" 
+                    onChange={(url) => setFormData({...formData, imageUrl: url})}
+                    folder="podcasts"
                   />
                 </div>
                 <div>

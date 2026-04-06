@@ -10,7 +10,6 @@ import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const TVPage = () => {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [currentProgram, setCurrentProgram] = useState<ScheduleItem | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   
@@ -18,21 +17,6 @@ export const TVPage = () => {
   const [newMessage, setNewMessage] = useState('');
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  const incrementVideoViews = async (video: YouTubeVideo) => {
-    try {
-      await updateDoc(doc(db, 'youtube_videos', video.id), {
-        views: increment(1)
-      });
-    } catch (error) {
-      console.error('Error incrementing video views:', error);
-    }
-  };
-
-  const handleVideoSelect = (video: YouTubeVideo) => {
-    setSelectedVideoId(video.youtubeId);
-    incrementVideoViews(video);
-  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
@@ -73,17 +57,6 @@ export const TVPage = () => {
           setSelectedVideoId(getYouTubeId(current.youtubeUrl));
         }
       }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const q = query(collection(db, 'youtube_videos'), orderBy('publishedAt', 'desc'), limit(8));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as YouTubeVideo));
-      setVideos(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'youtube_videos');
     });
     return () => unsubscribe();
   }, []);
@@ -130,9 +103,14 @@ export const TVPage = () => {
       {/* Live Player Section */}
       <section className="pt-10 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Player */}
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Left Ad Sidebar */}
+            <div className="hidden lg:flex flex-col gap-4">
+              <AdBanner size="sidebar" className="bg-gray-900 border-gray-800 rounded-2xl" />
+            </div>
+
+            {/* Main Player */}
+            <div className="lg:col-span-3">
               <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
                 {selectedVideoId ? (
                   <iframe
@@ -170,7 +148,7 @@ export const TVPage = () => {
               
               <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold">{currentProgram?.title || 'TV Grapiúna Ao Vivo'}</h1>
+                  <h1 className="text-2xl font-bold">{currentProgram?.title || 'Eventos ao Vivo'}</h1>
                   <p className="text-gray-400 text-sm">
                     {currentProgram?.host ? `Com apresentação de ${currentProgram.host}` : 'Acompanhe nossa programação local 24h.'}
                   </p>
@@ -192,7 +170,7 @@ export const TVPage = () => {
             </div>
 
             {/* Chat / Sidebar */}
-            <div className="bg-gray-900 rounded-2xl border border-gray-800 flex flex-col h-[500px] lg:h-auto overflow-hidden">
+            <div className="lg:col-span-1 bg-gray-900 rounded-2xl border border-gray-800 flex flex-col h-[500px] lg:h-auto overflow-hidden">
               <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/50 backdrop-blur-sm">
                 <h3 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
                   <MessageSquare size={16} className="text-red-600" /> Chat Ao Vivo
@@ -248,6 +226,11 @@ export const TVPage = () => {
                 )}
               </div>
             </div>
+
+            {/* Right Ad Sidebar */}
+            <div className="hidden lg:flex flex-col gap-4">
+              <AdBanner size="sidebar" className="bg-gray-900 border-gray-800 rounded-2xl" />
+            </div>
           </div>
         </div>
       </section>
@@ -260,97 +243,34 @@ export const TVPage = () => {
             <h2 className="text-3xl font-black uppercase tracking-tighter">Grade de <span className="text-red-600">Programação</span></h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {schedule.length > 0 ? schedule.map((prog, i) => (
               <button 
                 key={i} 
                 onClick={() => handleProgramClick(prog)}
-                className={`text-left p-6 rounded-xl border-l-4 transition-all transform hover:scale-105 ${
+                className={`text-left p-4 rounded-lg border-l-4 transition-all transform hover:scale-105 text-sm ${
                   currentProgram?.id === prog.id 
                     ? 'bg-red-600/10 border-red-600 shadow-lg shadow-red-900/20' 
                     : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
                 }`}
               >
-                <span className={`font-mono font-bold text-lg ${currentProgram?.id === prog.id ? 'text-red-400' : 'text-red-500'}`}>
+                <span className={`font-mono font-bold text-base ${currentProgram?.id === prog.id ? 'text-red-400' : 'text-red-500'}`}>
                   {prog.time}
                 </span>
-                <h3 className="text-xl font-bold mt-2">{prog.title}</h3>
-                <p className="text-gray-400 text-sm mt-1">Com {prog.host}</p>
+                <h3 className="text-lg font-bold mt-2 line-clamp-2">{prog.title}</h3>
+                <p className="text-gray-400 text-xs mt-1 line-clamp-1">Com {prog.host}</p>
                 {prog.youtubeUrl && (
-                  <div className="mt-4 flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
-                    <Play size={10} fill="currentColor" /> Assistir agora
+                  <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                    <Play size={10} fill="currentColor" /> Assistir
                   </div>
                 )}
               </button>
             )) : (
-              [1, 2, 3, 4].map((n) => (
-                <div key={n} className="bg-gray-800 p-6 rounded-xl border-l-4 border-gray-700 animate-pulse">
-                  <div className="h-6 bg-gray-700 rounded w-1/4 mb-2"></div>
-                  <div className="h-6 bg-gray-700 rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-gray-700 rounded w-1/2"></div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-      
-      {/* Recent Videos */}
-      <section className="py-20 bg-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-12">
-            <div className="flex items-center gap-4">
-              <Youtube size={28} className="text-red-600" />
-              <h2 className="text-3xl font-black uppercase tracking-tighter">Vídeos <span className="text-red-600">Recentes</span></h2>
-            </div>
-            <a 
-              href="https://www.youtube.com/@tv.grapiuna" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
-            >
-              Ver todos no YouTube <Share2 size={14} />
-            </a>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {videos.length > 0 ? videos.map((video) => (
-              <motion.button
-                key={video.id}
-                whileHover={{ y: -5 }}
-                onClick={() => handleVideoSelect(video)}
-                className="group text-left"
-              >
-                <div className="relative aspect-video rounded-xl overflow-hidden mb-4 border border-gray-800">
-                  <img 
-                    src={video.thumbnailUrl} 
-                    alt={video.title} 
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
-                      <Play size={24} fill="white" className="text-white ml-1" />
-                    </div>
-                  </div>
-                </div>
-                <h3 className="font-bold text-gray-100 line-clamp-2 group-hover:text-red-500 transition-colors">
-                  {video.title}
-                </h3>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                    {new Date(video.publishedAt).toLocaleDateString('pt-BR')}
-                  </p>
-                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold">
-                    <Eye size={12} /> {video.views || 0}
-                  </div>
-                </div>
-              </motion.button>
-            )) : (
-              [1, 2, 3, 4].map((n) => (
-                <div key={n} className="space-y-4 animate-pulse">
-                  <div className="aspect-video bg-gray-900 rounded-xl"></div>
-                  <div className="h-4 bg-gray-900 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-900 rounded w-1/4"></div>
+              [1, 2, 3, 4, 5, 6].map((n) => (
+                <div key={n} className="bg-gray-800 p-4 rounded-lg border-l-4 border-gray-700 animate-pulse">
+                  <div className="h-5 bg-gray-700 rounded w-1/3 mb-2"></div>
+                  <div className="h-5 bg-gray-700 rounded w-full mb-2"></div>
+                  <div className="h-3 bg-gray-700 rounded w-2/3"></div>
                 </div>
               ))
             )}

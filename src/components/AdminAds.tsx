@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Plus, Trash2, Edit2, X, ExternalLink } from 'lucide-react';
+import { ImageUploadField } from './ImageUploadField';
 
 export const AdminAds = () => {
   const [ads, setAds] = useState<any[]>([]);
@@ -117,12 +118,11 @@ export const AdminAds = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-2">URL da Imagem</label>
-                <input 
-                  required
+                <ImageUploadField 
+                  label="Imagem do Anúncio"
                   value={formData.imageUrl}
-                  onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                  type="url" className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-600" 
+                  onChange={(url) => setFormData({...formData, imageUrl: url})}
+                  folder="ads"
                 />
               </div>
               <div>

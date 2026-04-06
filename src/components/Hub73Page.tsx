@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Video, Briefcase, Users, Calendar, Play } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { Video, Play, Youtube, Eye } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, limit, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { YouTubeVideo } from '../types';
 
 export const Hub73Page = () => {
   const [projects, setProjects] = useState<any[]>([]);
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [filter, setFilter] = useState('Todos');
   const [loading, setLoading] = useState(true);
 
@@ -22,6 +24,27 @@ export const Hub73Page = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, 'youtube_videos'), orderBy('publishedAt', 'desc'), limit(4));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as YouTubeVideo));
+      setVideos(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'youtube_videos');
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const incrementVideoViews = async (video: YouTubeVideo) => {
+    try {
+      await updateDoc(doc(db, 'youtube_videos', video.id), {
+        views: increment(1)
+      });
+    } catch (error) {
+      console.error('Error incrementing video views:', error);
+    }
+  };
+
   const filteredProjects = filter === 'Todos' 
     ? projects 
     : projects.filter(p => p.category?.toLowerCase() === filter.toLowerCase());
@@ -30,8 +53,8 @@ export const Hub73Page = () => {
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Hero */}
-      <section className="bg-gray-900 text-white py-24 relative overflow-hidden">
+      {/* Hero - Compact */}
+      <section className="bg-gray-900 text-white py-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <img 
             src="/assets/pagehub73.png" 
@@ -42,52 +65,30 @@ export const Hub73Page = () => {
         </div>
         <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
           <motion.div 
-  initial={{ opacity: 0, scale: 0.9 }}
-  animate={{ opacity: 1, scale: 1 }}
-  className="mb-8 flex justify-center"
->
-  <img 
-    src="/assets/hub73.png" 
-    alt="HUB73 PRODUTORA" 
-    className="h-20 md:h-28 w-auto object-contain" 
-  />
-</motion.div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 uppercase">
-      Transformamos Ideias em <span className="text-[#00A859]">Impacto Social</span>
-    </h1>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-12">
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-4 flex justify-center"
+          >
+            <img 
+              src="/assets/hub73.png" 
+              alt="HUB73 PRODUTORA" 
+              className="h-16 md:h-20 w-auto object-contain" 
+            />
+          </motion.div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 uppercase">
+            Transformamos Ideias em <span className="text-[#00A859]">Impacto Social</span>
+          </h1>
+          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
             A produtora oficial do Grupo Grapiúna. Especialistas em comerciais, podcasts, institucionais e cobertura de eventos.
           </p>
-          <button className="bg-white text-black px-10 py-4 rounded-full font-bold text-lg hover:bg-red-600 hover:text-white transition-all transform hover:scale-105">
+          <button className="bg-white text-black px-8 py-3 rounded-full font-bold text-base hover:bg-red-600 hover:text-white transition-all transform hover:scale-105">
             SOLICITAR ORÇAMENTO
           </button>
         </div>
       </section>
 
-      {/* Services */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-            {[
-              { title: 'Podcasts', icon: Users, desc: 'Estúdio completo com multi-câmeras e edição profissional.' },
-              { title: 'Comerciais', icon: Video, desc: 'Produção de VT para TV e redes sociais com alta conversão.' },
-              { title: 'Institucionais', icon: Briefcase, desc: 'Conte a história da sua empresa com cinematografia premium.' },
-              { title: 'Eventos', icon: Calendar, desc: 'Cobertura completa e transmissão ao vivo de grandes eventos.' },
-            ].map((s, i) => (
-              <div key={i} className="group">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-900 mb-6 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
-                  <s.icon size={32} />
-                </div>
-                <h3 className="text-xl font-bold mb-3">{s.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Portfolio Grid */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
             <h2 className="text-3xl font-black uppercase tracking-tighter">Nosso <span className="text-red-600">Portfólio</span></h2>
@@ -142,6 +143,69 @@ export const Hub73Page = () => {
               <p className="text-gray-500 font-bold uppercase tracking-widest">Nenhum projeto encontrado nesta categoria.</p>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Recent Videos Section */}
+      <section className="py-20 bg-gray-950 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-12">
+            <div className="flex items-center gap-4">
+              <Youtube size={28} className="text-red-600" />
+              <h2 className="text-3xl font-black uppercase tracking-tighter">Vídeos <span className="text-red-600">Recentes</span></h2>
+            </div>
+            <a 
+              href="https://www.youtube.com/@tv.grapiuna" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2"
+            >
+              Ver todos no YouTube
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {videos.length > 0 ? videos.map((video) => (
+              <motion.button
+                key={video.id}
+                whileHover={{ y: -5 }}
+                onClick={() => incrementVideoViews(video)}
+                className="group text-left"
+              >
+                <div className="relative aspect-video rounded-xl overflow-hidden mb-4 border border-gray-800">
+                  <img 
+                    src={video.thumbnailUrl} 
+                    alt={video.title} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+                      <Play size={24} fill="white" className="text-white ml-1" />
+                    </div>
+                  </div>
+                </div>
+                <h3 className="font-bold text-gray-100 line-clamp-2 group-hover:text-red-500 transition-colors">
+                  {video.title}
+                </h3>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    {new Date(video.publishedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-gray-500 font-bold">
+                    <Eye size={12} /> {video.views || 0}
+                  </div>
+                </div>
+              </motion.button>
+            )) : (
+              [1, 2, 3, 4].map((n) => (
+                <div key={n} className="space-y-4 animate-pulse">
+                  <div className="aspect-video bg-gray-900 rounded-xl"></div>
+                  <div className="h-4 bg-gray-900 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-900 rounded w-1/4"></div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
     </div>
