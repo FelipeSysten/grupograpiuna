@@ -4,36 +4,43 @@ import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '../firebase';
 
 interface AdBannerProps {
-  size: 'leaderboard' | 'sidebar' | 'mobile';
+  size: 'leaderboard' | 'sidebar' | 'mobile' | 'cover';
+  page?: string;
   className?: string;
 }
 
-export const AdBanner = ({ size, className }: AdBannerProps) => {
+export const AdBanner = ({ size, page, className }: AdBannerProps) => {
   const [ad, setAd] = useState<any>(null);
 
   useEffect(() => {
-    const q = query(
+    let q = query(
       collection(db, 'ads'),
       where('size', '==', size),
-      where('active', '==', true),
-      limit(1)
+      where('active', '==', true)
     );
+
+    if (page) {
+      q = query(q, where('page', '==', page));
+    }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        setAd(snapshot.docs[0].data());
+        // Pega um anúncio aleatório dos ativos para a página
+        const randomIndex = Math.floor(Math.random() * snapshot.docs.length);
+        setAd(snapshot.docs[randomIndex].data());
       } else {
         setAd(null);
       }
     });
 
     return () => unsubscribe();
-  }, [size]);
+  }, [size, page]);
 
   const dimensions = {
-    leaderboard: { width: '970px', height: '90px', label: '970x90 Leaderboard' },
+    leaderboard: { width: '100%', height: '90px', label: '970x90 Leaderboard' },
     sidebar: { width: '300px', height: '250px', label: '300x250 Sidebar' },
     mobile: { width: '320px', height: '50px', label: '320x50 Mobile' },
+    cover: { width: '100%', height: 'auto', label: 'Capa Estilo YouTube' },
   };
 
   const { label } = dimensions[size];
@@ -49,6 +56,7 @@ export const AdBanner = ({ size, className }: AdBannerProps) => {
           size === 'leaderboard' && "w-full max-w-[970px] h-[90px]",
           size === 'sidebar' && "w-[300px] h-[250px]",
           size === 'mobile' && "w-[320px] h-[50px]",
+          size === 'cover' && "w-full aspect-[16/4] md:aspect-[16/3]",
           className
         )}
       >
@@ -64,6 +72,7 @@ export const AdBanner = ({ size, className }: AdBannerProps) => {
         size === 'leaderboard' && "w-full max-w-[970px] h-[90px]",
         size === 'sidebar' && "w-[300px] h-[250px]",
         size === 'mobile' && "w-[320px] h-[50px]",
+        size === 'cover' && "w-full aspect-[16/4] md:aspect-[16/3]",
         className
       )}
     >

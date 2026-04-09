@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Play, Calendar, Users, MessageSquare, Share2, Send, LogIn, Youtube, Eye } from 'lucide-react';
+import { Play, Calendar, MessageSquare, Share2, Send, LogIn, Youtube, Eye } from 'lucide-react';
 import { AdBanner } from './AdBanner';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc } from 'firebase/firestore';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, loginWithGoogle } from '../firebase';
-import { ScheduleItem, YouTubeVideo } from '../types';
+import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const TVPage = () => {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [currentProgram, setCurrentProgram] = useState<ScheduleItem | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [liveConfig, setLiveConfig] = useState<any>(null);
   
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -23,6 +24,16 @@ export const TVPage = () => {
       setUser(u);
     });
     return () => unsubscribeAuth();
+  }, []);
+
+  // Busca configuração de live (YouTube ou Direto)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'live_config', 'current'), (doc) => {
+      if (doc.exists()) {
+        setLiveConfig(doc.data());
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -46,20 +57,19 @@ export const TVPage = () => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleItem));
       setSchedule(data);
       
-      // Logic to find current program
       const now = new Date();
       const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       
       const current = [...data].reverse().find(p => p.time <= currentTime) || data[0];
       if (current) {
         setCurrentProgram(current);
-        if (current.youtubeUrl) {
+        if (current.youtubeUrl && !liveConfig?.active) {
           setSelectedVideoId(getYouTubeId(current.youtubeUrl));
         }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [liveConfig]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +96,25 @@ export const TVPage = () => {
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: 'TV Grapiúna - Ao Vivo',
+      text: 'Assista agora a TV Grapiúna ao vivo!',
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.error('Erro ao compartilhar:', err);
+    }
+  };
+
   const handleProgramClick = (prog: ScheduleItem) => {
     if (prog.youtubeUrl) {
       setSelectedVideoId(getYouTubeId(prog.youtubeUrl));
@@ -95,27 +124,29 @@ export const TVPage = () => {
 
   return (
     <div className="bg-gray-950 min-h-screen text-white">
-      {/* Top Ad */}
-      <div className="py-6 bg-black">
-        <AdBanner size="leaderboard" className="bg-gray-900 border-gray-800" />
+      {/* Top Ad - Agora estilo Capa YouTube */}
+      <div className="bg-black">
+        <AdBanner size="cover" page="tv" className="bg-gray-900 border-gray-800" />
       </div>
 
       {/* Live Player Section */}
       <section className="pt-10 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Left Ad Sidebar */}
-            <div className="hidden lg:flex flex-col gap-4">
-              <AdBanner size="sidebar" className="bg-gray-900 border-gray-800 rounded-2xl" />
-            </div>
-
-            {/* Main Player */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Main Player - Ocupa 3 colunas para dar espaço ao chat */}
             <div className="lg:col-span-3">
               <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
-                {selectedVideoId ? (
+                {liveConfig?.active && liveConfig?.type === 'direct' ? (
+                  <video 
+                    src={liveConfig.url} 
+                    controls 
+                    autoPlay 
+                    className="absolute inset-0 w-full h-full"
+                  />
+                ) : (selectedVideoId || (liveConfig?.active && liveConfig?.type === 'youtube')) ? (
                   <iframe
                     className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${selectedVideoId}?autoplay=1`}
+                    src={`https://www.youtube.com/embed/${liveConfig?.active ? getYouTubeId(liveConfig.url) : selectedVideoId}?autoplay=1`}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -139,16 +170,16 @@ export const TVPage = () => {
                   </div>
                 )}
                 
-                {currentProgram && (
+                {(currentProgram || liveConfig?.active) && (
                   <div className="absolute top-6 left-6 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full text-xs font-bold z-10">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div> NO AR: {currentProgram.title}
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div> NO AR: {liveConfig?.active ? 'TRANSMISSÃO AO VIVO' : currentProgram?.title}
                   </div>
                 )}
               </div>
               
               <div className="mt-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h1 className="text-2xl font-bold">{currentProgram?.title || 'Eventos ao Vivo'}</h1>
+                  <h1 className="text-2xl font-bold">{liveConfig?.active ? 'TV Grapiúna Ao Vivo' : (currentProgram?.title || 'Eventos ao Vivo')}</h1>
                   <p className="text-gray-400 text-sm">
                     {currentProgram?.host ? `Com apresentação de ${currentProgram.host}` : 'Acompanhe nossa programação local 24h.'}
                   </p>
@@ -162,14 +193,25 @@ export const TVPage = () => {
                   >
                     INSCREVER NO CANAL
                   </a>
-                  <button className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                  <button 
+                    onClick={handleShare}
+                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
                     <Share2 size={18} /> Compartilhar
                   </button>
                 </div>
               </div>
+
+              {/* Banners abaixo do player - 04 banners */}
+              <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
+              </div>
             </div>
 
-            {/* Chat / Sidebar */}
+            {/* Chat Sidebar */}
             <div className="lg:col-span-1 bg-gray-900 rounded-2xl border border-gray-800 flex flex-col h-[500px] lg:h-auto overflow-hidden">
               <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/50 backdrop-blur-sm">
                 <h3 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
@@ -225,11 +267,6 @@ export const TVPage = () => {
                   </button>
                 )}
               </div>
-            </div>
-
-            {/* Right Ad Sidebar */}
-            <div className="hidden lg:flex flex-col gap-4">
-              <AdBanner size="sidebar" className="bg-gray-900 border-gray-800 rounded-2xl" />
             </div>
           </div>
         </div>

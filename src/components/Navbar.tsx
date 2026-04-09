@@ -23,7 +23,7 @@ export const Navbar = () => {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Info },
-    { name: 'Eventos ao Vivo', path: '/tv', icon: Tv },
+    { name: 'TV Grapiúna', path: '/tv', icon: Tv },
     { name: 'Notícias', path: '/noticias', icon: Newspaper },
     { name: 'HUB73', path: '/hub73', icon: Video },
     { name: 'Podcasts', path: '/podcasts', icon: Mic },
@@ -38,7 +38,7 @@ export const Navbar = () => {
             <span className="text-red-500">AO VIVO:</span>
               <span className="animate-pulse flex items-center gap-1">
               <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-              EVENTOS AO VIVO
+              TV GRAPIÚNA AO VIVO
             </span>
           </div>
           {stats && (
