@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { YouTubeVideo } from '../types';
-import { Trash2, Plus, Youtube, ExternalLink, Radio, Save } from 'lucide-react';
+import { Trash2, Plus, Youtube, ExternalLink, Radio, Save, Loader2 } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 export const AdminVideos = () => {
@@ -17,6 +17,7 @@ export const AdminVideos = () => {
     youtubeUrl: ''
   });
   const [loading, setLoading] = useState(false);
+  const [savingLive, setSavingLive] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'youtube_videos'), orderBy('publishedAt', 'desc'));
@@ -30,9 +31,9 @@ export const AdminVideos = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'live_config', 'current'), (doc) => {
-      if (doc.exists()) {
-        setLiveConfig(doc.data() as any);
+    const unsubscribe = onSnapshot(doc(db, 'live_config', 'current'), (docSnap) => {
+      if (docSnap.exists()) {
+        setLiveConfig(docSnap.data() as any);
       }
     });
     return () => unsubscribe();
@@ -70,11 +71,19 @@ export const AdminVideos = () => {
   };
 
   const handleSaveLiveConfig = async () => {
+    setSavingLive(true);
     try {
-      await setDoc(doc(db, 'live_config', 'current'), liveConfig);
-      alert('Configuração de Live atualizada!');
+      // Usamos setDoc para garantir que o documento seja criado ou atualizado
+      await setDoc(doc(db, 'live_config', 'current'), {
+        ...liveConfig,
+        updatedAt: new Date().toISOString()
+      });
+      alert('Configuração de Live atualizada com sucesso!');
     } catch (error) {
+      console.error("Erro ao salvar live_config:", error);
       handleFirestoreError(error, OperationType.UPDATE, 'live_config');
+    } finally {
+      setSavingLive(false);
     }
   };
 
@@ -109,9 +118,9 @@ export const AdminVideos = () => {
                 id="liveActive"
                 checked={liveConfig.active}
                 onChange={(e) => setLiveConfig({...liveConfig, active: e.target.checked})}
-                className="w-6 h-6 accent-red-600"
+                className="w-6 h-6 accent-red-600 cursor-pointer"
               />
-              <label htmlFor="liveActive" className="font-bold text-gray-700 uppercase text-sm">Ativar Transmissão Forçada</label>
+              <label htmlFor="liveActive" className="font-bold text-gray-700 uppercase text-sm cursor-pointer">Ativar Transmissão Forçada</label>
             </div>
 
             <div className="space-y-2">
@@ -140,9 +149,11 @@ export const AdminVideos = () => {
             </div>
             <button 
               onClick={handleSaveLiveConfig}
-              className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2"
+              disabled={savingLive}
+              className="w-full bg-gray-900 text-white font-bold py-4 rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Save size={20} /> SALVAR CONFIGURAÇÃO AO VIVO
+              {savingLive ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />} 
+              {savingLive ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÃO AO VIVO'}
             </button>
           </div>
         </div>
