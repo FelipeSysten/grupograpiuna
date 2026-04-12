@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Upload, Link as LinkIcon, X, Loader2 } from 'lucide-react';
-import { storage } from '../firebase';
+
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
+const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
 interface ImageUploadFieldProps {
   label: string;
@@ -16,32 +18,45 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({ label, value
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    const storageRef = ref(storage, `${folder}/${Date.now()}_${file.name}`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    formData.append('folder', folder);
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        setProgress(p);
-      },
-      (error) => {
-        console.error('Upload error:', error);
-        alert('Erro ao fazer upload da imagem.');
-        setUploading(false);
-      },
-      async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        onChange(downloadURL);
-        setUploading(false);
-        setProgress(0);
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        setProgress((event.loaded / event.total) * 100);
       }
-    );
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const data = JSON.parse(xhr.responseText);
+        onChange(data.secure_url);
+      } else {
+        console.error('Cloudinary upload error:', xhr.responseText);
+        alert('Erro ao fazer upload da imagem. Verifique o upload preset no Cloudinary.');
+      }
+      setUploading(false);
+      setProgress(0);
+    });
+
+    xhr.addEventListener('error', () => {
+      console.error('Cloudinary upload network error');
+      alert('Erro de rede ao fazer upload da imagem.');
+      setUploading(false);
+      setProgress(0);
+    });
+
+    setUploading(true);
+    xhr.open('POST', UPLOAD_URL);
+    xhr.send(formData);
   };
 
   return (
