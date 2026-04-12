@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL, getStorage } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Upload, Link as LinkIcon, X, Loader2 } from 'lucide-react';
-
-const storage = getStorage();
+import { storage } from '../firebase';
 
 interface ImageUploadFieldProps {
   label: string;
