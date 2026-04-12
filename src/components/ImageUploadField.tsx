@@ -5,6 +5,11 @@ const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
+
+// Adicione esta linha:
+console.log("Variáveis do Cloudinary:", { CLOUD_NAME, UPLOAD_PRESET });
+
+
 interface ImageUploadFieldProps {
   label: string;
   value: string;
