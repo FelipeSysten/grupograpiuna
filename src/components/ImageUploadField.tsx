@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Link as LinkIcon, X, Loader2 } from 'lucide-react';
 
-const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME as string;
-const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
+const CLOUD_NAME = "dutpp0jvs";
+const UPLOAD_PRESET = "grupograpiuna";
 const UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
 
 
