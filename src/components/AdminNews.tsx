@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Plus, Trash2, Edit2, X, Check, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Image, Youtube, Link as LinkIcon } from 'lucide-react';
 import { ImageUploadField } from './ImageUploadField';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { NewsMediaItem } from '../types';
 
 export const AdminNews = () => {
   const [news, setNews] = useState<any[]>([]);
@@ -15,8 +16,13 @@ export const AdminNews = () => {
     category: 'Cidade',
     author: '',
     imageUrl: '',
-    featured: false
+    featured: false,
+    media: [] as NewsMediaItem[]
   });
+  const [pendingImage, setPendingImage] = useState('');
+  const [pendingVideo, setPendingVideo] = useState('');
+  const [pendingLinkUrl, setPendingLinkUrl] = useState('');
+  const [pendingLinkTitle, setPendingLinkTitle] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
@@ -43,9 +49,7 @@ export const AdminNews = () => {
           createdAt: Timestamp.now()
         });
       }
-      setIsModalOpen(false);
-      setEditingId(null);
-      setFormData({ title: '', content: '', category: 'Cidade', author: '', imageUrl: '', featured: false });
+      closeModal();
     } catch (error) {
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, path);
     }
@@ -61,6 +65,16 @@ export const AdminNews = () => {
     }
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingId(null);
+    setFormData({ title: '', content: '', category: 'Cidade', author: '', imageUrl: '', featured: false, media: [] });
+    setPendingImage('');
+    setPendingVideo('');
+    setPendingLinkUrl('');
+    setPendingLinkTitle('');
+  };
+
   const handleEdit = (item: any) => {
     setEditingId(item.id);
     setFormData({
@@ -69,9 +83,18 @@ export const AdminNews = () => {
       category: item.category,
       author: item.author,
       imageUrl: item.imageUrl,
-      featured: item.featured || false
+      featured: item.featured || false,
+      media: item.media || []
     });
     setIsModalOpen(true);
+  };
+
+  const addMediaItem = (item: NewsMediaItem) => {
+    setFormData(prev => ({ ...prev, media: [...prev.media, item] }));
+  };
+
+  const removeMediaItem = (index: number) => {
+    setFormData(prev => ({ ...prev, media: prev.media.filter((_, i) => i !== index) }));
   };
 
   return (
@@ -126,12 +149,12 @@ export const AdminNews = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
               <h2 className="text-xl font-black uppercase tracking-tighter">{editingId ? 'Editar' : 'Nova'} <span className="text-red-600">Notícia</span></h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-red-600 transition-colors"><X size={24} /></button>
+              <button type="button" onClick={closeModal} className="text-gray-400 hover:text-red-600 transition-colors"><X size={24} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Título</label>
@@ -180,8 +203,8 @@ export const AdminNews = () => {
                   ></textarea>
                 </div>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="featured"
                     checked={formData.featured}
                     onChange={(e) => setFormData({...formData, featured: e.target.checked})}
@@ -189,9 +212,110 @@ export const AdminNews = () => {
                   />
                   <label htmlFor="featured" className="text-sm font-bold text-gray-700">Notícia em Destaque</label>
                 </div>
+
+                {/* ── Mídias adicionais ── */}
+                <div className="md:col-span-2 border-t border-gray-100 pt-6 space-y-5">
+                  <p className="text-xs font-bold uppercase text-gray-400 tracking-widest">Mídias Adicionais</p>
+
+                  {/* Lista atual */}
+                  {formData.media.length > 0 && (
+                    <ul className="space-y-2">
+                      {formData.media.map((item, i) => (
+                        <li key={i} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-2 text-sm">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                            item.type === 'image' ? 'bg-blue-100 text-blue-600' :
+                            item.type === 'video' ? 'bg-red-100 text-red-600' :
+                            'bg-gray-200 text-gray-600'
+                          }`}>{item.type}</span>
+                          <span className="flex-1 truncate text-gray-600">{item.title || item.url}</span>
+                          <button type="button" onClick={() => removeMediaItem(i)} className="text-gray-400 hover:text-red-600 transition-colors">
+                            <X size={16} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Adicionar foto */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase text-gray-400 flex items-center gap-1"><Image size={12}/> Foto adicional</p>
+                    <div className="flex gap-2">
+                      <ImageUploadField
+                        label=""
+                        value={pendingImage}
+                        onChange={setPendingImage}
+                        folder="news"
+                      />
+                    </div>
+                    {pendingImage && (
+                      <button
+                        type="button"
+                        onClick={() => { addMediaItem({ type: 'image', url: pendingImage }); setPendingImage(''); }}
+                        className="text-xs font-bold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        + Adicionar foto
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Adicionar vídeo */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase text-gray-400 flex items-center gap-1"><Youtube size={12}/> Vídeo (URL YouTube)</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={pendingVideo}
+                        onChange={(e) => setPendingVideo(e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-600"
+                      />
+                      <button
+                        type="button"
+                        disabled={!pendingVideo.trim()}
+                        onClick={() => { addMediaItem({ type: 'video', url: pendingVideo.trim() }); setPendingVideo(''); }}
+                        className="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Adicionar link */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-bold uppercase text-gray-400 flex items-center gap-1"><LinkIcon size={12}/> Link externo</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={pendingLinkUrl}
+                        onChange={(e) => setPendingLinkUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-600"
+                      />
+                      <input
+                        type="text"
+                        value={pendingLinkTitle}
+                        onChange={(e) => setPendingLinkTitle(e.target.value)}
+                        placeholder="Título (opcional)"
+                        className="w-36 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-red-600"
+                      />
+                      <button
+                        type="button"
+                        disabled={!pendingLinkUrl.trim()}
+                        onClick={() => {
+                          addMediaItem({ type: 'link', url: pendingLinkUrl.trim(), title: pendingLinkTitle.trim() || undefined });
+                          setPendingLinkUrl('');
+                          setPendingLinkTitle('');
+                        }}
+                        className="bg-gray-700 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-900 transition-colors disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="flex gap-4 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-gray-100 text-gray-500 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors">CANCELAR</button>
+                <button type="button" onClick={closeModal} className="flex-1 bg-gray-100 text-gray-500 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors">CANCELAR</button>
                 <button type="submit" className="flex-1 bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-100">SALVAR NOTÍCIA</button>
               </div>
             </form>

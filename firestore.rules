@@ -6,7 +6,7 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: news
-    // Fields: title, content, category, author, imageUrl, createdAt, featured
+    // Fields: title, content, category, author, imageUrl, createdAt, featured, media (optional array)
     //
     // Collection: tv_schedule
     // Fields: time, title, host, dayOfWeek
@@ -62,7 +62,8 @@ service cloud.firestore {
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
              data.content is string && data.content.size() > 0 &&
              data.category is string &&
-             data.author is string;
+             data.author is string &&
+             (!data.keys().hasAll(['media']) || data.media is list);
     }
 
     function isValidChatMessage(data) {

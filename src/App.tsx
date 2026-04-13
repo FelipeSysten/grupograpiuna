@@ -20,6 +20,14 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { NewsDetailPage } from './components/NewsDetailPage';
 import { AdBanner } from './components/AdBanner';
 
+function ScrollToTop() {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+  return null;
+}
+
 function AccessTracker() {
   const location = useLocation();
 
@@ -52,6 +60,7 @@ function AccessTracker() {
 export default function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AccessTracker />
       <div className="min-h-screen flex flex-col font-sans selection:bg-red-100 selection:text-red-900 pb-16 md:pb-0">
         <Navbar />

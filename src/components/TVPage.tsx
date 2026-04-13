@@ -124,18 +124,13 @@ export const TVPage = () => {
 
   return (
     <div className="bg-gray-950 min-h-screen text-white">
-      {/* Top Ad - Agora estilo Capa YouTube */}
-      <div className="bg-black">
-        <AdBanner size="cover" page="tv" className="bg-gray-900 border-gray-800" />
-      </div>
-
-      {/* Live Player Section */}
+      {/* Live Player Section — primeiro elemento visível após a navbar */}
       <section className="pt-10 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Main Player - Ocupa 3 colunas para dar espaço ao chat */}
             <div className="lg:col-span-3">
-              <div className="relative aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
+              <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-gray-800">
                 {liveConfig?.active && liveConfig?.type === 'direct' ? (
                   <video 
                     src={liveConfig.url} 
@@ -271,6 +266,11 @@ export const TVPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Patrocínio — cover banner entre player e grade */}
+      <div className="bg-black border-t border-gray-800">
+        <AdBanner size="cover" page="tv" className="bg-gray-900" />
+      </div>
 
       {/* Programming Schedule */}
       <section className="py-20 bg-gray-900/50">

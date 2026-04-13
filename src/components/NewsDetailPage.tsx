@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { motion } from 'motion/react';
-import { Clock, User, ArrowLeft, Share2, Facebook, Twitter, MessageCircle } from 'lucide-react';
+import { Clock, User, ArrowLeft, Share2, Facebook, Twitter, MessageCircle, ExternalLink } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { AdBanner } from './AdBanner';
 
@@ -52,6 +52,11 @@ export const NewsDetailPage = () => {
   }
 
   const shareUrl = window.location.href;
+
+  const getYouTubeId = (url: string): string | null => {
+    const match = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]{11})/);
+    return match ? match[1] : null;
+  };
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -127,6 +132,68 @@ export const NewsDetailPage = () => {
             <Markdown>{news.content}</Markdown>
           </div>
         </div>
+
+        {/* Galeria de mídias adicionais */}
+        {news.media && news.media.length > 0 && (() => {
+          const images = news.media.filter((m: any) => m.type === 'image');
+          const videos = news.media.filter((m: any) => m.type === 'video');
+          const links  = news.media.filter((m: any) => m.type === 'link');
+          return (
+            <div className="mt-12 pt-10 border-t border-gray-100 space-y-10">
+              <h2 className="text-2xl font-black tracking-tighter uppercase">Galeria</h2>
+
+              {images.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {images.map((item: any, i: number) => (
+                    <div key={i} className="rounded-xl overflow-hidden shadow-md">
+                      <img
+                        src={item.url}
+                        alt={`Foto ${i + 1}`}
+                        className="w-full h-auto object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {videos.map((item: any, i: number) => {
+                const videoId = getYouTubeId(item.url);
+                if (!videoId) return null;
+                return (
+                  <div key={i} className="w-full aspect-video rounded-2xl overflow-hidden shadow-2xl">
+                    <iframe
+                      className="w-full h-full"
+                      src={`https://www.youtube.com/embed/${videoId}`}
+                      title={`Vídeo ${i + 1}`}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              })}
+
+              {links.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Links Relacionados</p>
+                  {links.map((item: any, i: number) => (
+                    <a
+                      key={i}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-red-50 hover:text-red-600 transition-colors group"
+                    >
+                      <ExternalLink size={18} className="shrink-0 text-gray-400 group-hover:text-red-600 transition-colors" />
+                      <span className="font-medium truncate">{item.title || item.url}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Footer Ad */}
         <div className="mt-16 py-12 border-t border-gray-100">

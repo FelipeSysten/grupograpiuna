@@ -1,11 +1,20 @@
+export interface NewsMediaItem {
+  type: 'image' | 'video' | 'link';
+  url: string;
+  title?: string;
+}
+
 export interface NewsPost {
-  id: number;
+  id?: string;
   title: string;
+  content: string;
   category: string;
-  excerpt: string;
   author: string;
-  date: string;
-  image: string;
+  imageUrl: string;
+  createdAt?: any;
+  updatedAt?: any;
+  featured?: boolean;
+  media?: NewsMediaItem[];
 }
 
 export interface Podcast {
