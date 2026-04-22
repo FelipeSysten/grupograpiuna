@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Plus, Trash2, Edit2, X, ShoppingBag, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, ShoppingBag, Eye, EyeOff, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 import { ImageUploadField } from './ImageUploadField';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
@@ -55,6 +55,8 @@ export const AdminShop = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [filterCat, setFilterCat] = useState('Todos');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   /* ── Firestore ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -72,6 +74,8 @@ export const AdminShop = () => {
   /* ── Salvar ────────────────────────────────────────────────────────────── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+    setSaveError(null);
     const path = 'shop_products';
     try {
       if (editingId) {
@@ -79,19 +83,23 @@ export const AdminShop = () => {
           ...formData,
           updatedAt: Timestamp.now(),
         });
+        console.log('[AdminShop] Produto atualizado com sucesso:', editingId);
       } else {
-        await addDoc(collection(db, path), {
+        const ref = await addDoc(collection(db, path), {
           ...formData,
           createdAt: Timestamp.now(),
         });
+        console.log('[AdminShop] Produto criado com sucesso:', ref.id);
       }
       closeModal();
     } catch (err) {
-      handleFirestoreError(
-        err,
-        editingId ? OperationType.UPDATE : OperationType.CREATE,
-        path,
-      );
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[AdminShop] Erro ao salvar produto:', msg, err);
+      setSaveError(msg.includes('permission') || msg.includes('Missing or insufficient')
+        ? 'Sem permissão para salvar. Verifique se você está autenticado como admin/editor.'
+        : `Erro ao salvar: ${msg}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -143,6 +151,7 @@ export const AdminShop = () => {
     setIsModalOpen(false);
     setEditingId(null);
     setFormData(EMPTY_FORM);
+    setSaveError(null);
   };
 
   const setField = <K extends keyof typeof EMPTY_FORM>(
@@ -487,20 +496,30 @@ export const AdminShop = () => {
                 </div>
               </div>
 
+              {/* Banner de erro */}
+              {saveError && (
+                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                  <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-sm font-bold leading-snug">{saveError}</p>
+                </div>
+              )}
+
               {/* Ações */}
               <div className="flex gap-4 pt-2">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="flex-1 bg-gray-100 text-gray-500 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors"
+                  disabled={saving}
+                  className="flex-1 bg-gray-100 text-gray-500 font-bold py-4 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
                 >
                   CANCELAR
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-100"
+                  disabled={saving}
+                  className="flex-1 bg-red-600 text-white font-bold py-4 rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-100 disabled:opacity-60 flex items-center justify-center gap-2"
                 >
-                  SALVAR PRODUTO
+                  {saving ? <><Loader2 size={16} className="animate-spin" /> SALVANDO…</> : 'SALVAR PRODUTO'}
                 </button>
               </div>
             </form>

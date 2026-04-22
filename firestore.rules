@@ -145,6 +145,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /news_stories/{storyId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /shop_products/{productId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
     match /test/connection {
       allow read: if true;
     }
