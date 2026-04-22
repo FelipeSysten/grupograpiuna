@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { loginWithGoogle, logout } from '../firebase';
-import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube, BarChart3, Smartphone, ShoppingBag } from 'lucide-react';
 import { AdminNews } from './AdminNews';
 import { AdminSchedule } from './AdminSchedule';
 import { AdminAds } from './AdminAds';
@@ -9,10 +9,12 @@ import { AdminHub73 } from './AdminHub73';
 import { AdminPodcasts } from './AdminPodcasts';
 import { AdminVideos } from './AdminVideos';
 import { AdminAnalytics } from './AdminAnalytics';
+import { AdminStories } from './AdminStories';
+import { AdminShop } from './AdminShop';
 
 export const AdminDashboard = () => {
   const { user, role, loading, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos' | 'stories' | 'shop'>('analytics');
 
   if (loading) {
     return (
@@ -72,6 +74,8 @@ export const AdminDashboard = () => {
             { id: 'hub73', label: 'Hub73', icon: Briefcase },
             { id: 'podcasts', label: 'Podcasts', icon: Mic },
             { id: 'videos', label: 'Vídeos YT', icon: Youtube },
+            { id: 'stories', label: 'Stories', icon: Smartphone },
+            { id: 'shop', label: 'Loja', icon: ShoppingBag },
           ].map((item) => (
             <button
               key={item.id}
@@ -118,6 +122,8 @@ export const AdminDashboard = () => {
           {activeTab === 'hub73' && <AdminHub73 />}
           {activeTab === 'podcasts' && <AdminPodcasts />}
           {activeTab === 'videos' && <AdminVideos />}
+          {activeTab === 'stories' && <AdminStories />}
+          {activeTab === 'shop' && <AdminShop />}
         </div>
       </main>
     </div>

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Search, Filter, Clock, User, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdBanner } from './AdBanner';
+import { StoriesStrip } from './StoriesStrip';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -35,6 +36,10 @@ export const NewsPage = () => {
 
   return (
     <div className="bg-white min-h-screen">
+
+      {/* Stories / Reels */}
+      <StoriesStrip />
+
       {/* Category Bar */}
       <div className="bg-gray-100 border-b border-gray-200 overflow-x-auto">
         <div className="max-w-7xl mx-auto px-4 flex space-x-8 h-12 items-center whitespace-nowrap scrollbar-hide">

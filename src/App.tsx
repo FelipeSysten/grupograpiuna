@@ -18,6 +18,7 @@ import { PodcastPage } from './components/PodcastPage';
 import { MidiaKitPage } from './components/MidiaKitPage';
 import { AdminDashboard } from './components/AdminDashboard';
 import { NewsDetailPage } from './components/NewsDetailPage';
+import { ShopPage } from './components/ShopPage';
 import { AdBanner } from './components/AdBanner';
 
 function ScrollToTop() {
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/noticias/:id" element={<NewsDetailPage />} />
             <Route path="/hub73" element={<Hub73Page />} />
             <Route path="/podcasts" element={<PodcastPage />} />
+            <Route path="/loja" element={<ShopPage />} />
             <Route path="/anuncie" element={<MidiaKitPage />} />
             <Route path="/midia-kit" element={<MidiaKitPage />} />
             <Route path="/admin" element={<AdminDashboard />} />

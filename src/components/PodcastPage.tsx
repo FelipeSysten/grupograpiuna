@@ -71,50 +71,50 @@ export const PodcastPage = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {podcasts.map((podcast) => (
-                <motion.div 
+                <motion.div
                   key={podcast.id}
                   whileHover={{ y: -10 }}
                   className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 group"
                 >
                   <div className="relative aspect-square">
-                    <img 
-                      src={podcast.imageUrl} 
-                      alt={podcast.title} 
+                    <img
+                      src={podcast.imageUrl}
+                      alt={podcast.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <a 
-                        href={podcast.audioUrl || podcast.youtubeUrl || "#"} 
-                        target="_blank" 
+                      <a
+                        href={podcast.audioUrl || podcast.youtubeUrl || "#"}
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-xl"
+                        className="w-14 h-14 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-xl"
                       >
-                        <Play size={24} fill="currentColor" />
+                        <Play size={20} fill="currentColor" />
                       </a>
                     </div>
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-3">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
                       <span className="text-orange-600 text-[10px] font-bold uppercase tracking-widest">EPISÓDIO</span>
-                      <span className="flex items-center gap-1 text-gray-400 text-[10px] font-bold"><Clock size={12} /> {podcast.duration || '45 min'}</span>
+                      <span className="flex items-center gap-1 text-gray-400 text-[10px] font-bold"><Clock size={11} /> {podcast.duration || '45 min'}</span>
                     </div>
-                    <h3 className="text-xl font-bold mb-4 group-hover:text-orange-600 transition-colors line-clamp-2">
+                    <h3 className="text-sm font-bold mb-2 group-hover:text-orange-600 transition-colors line-clamp-2">
                       {podcast.title}
                     </h3>
-                    <p className="text-sm text-gray-500 line-clamp-2 mb-4">{podcast.description}</p>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-3">{podcast.description}</p>
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
-                          <Mic size={14} />
+                        <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                          <Mic size={12} />
                         </div>
                         <span className="text-xs font-bold text-gray-600">Grapiúna Talks</span>
                       </div>
-                      <div className="flex gap-3 text-gray-400">
-                        <button className="hover:text-orange-600 transition-colors"><Heart size={18} /></button>
-                        <button className="hover:text-orange-600 transition-colors"><Share2 size={18} /></button>
+                      <div className="flex gap-2 text-gray-400">
+                        <button className="hover:text-orange-600 transition-colors"><Heart size={15} /></button>
+                        <button className="hover:text-orange-600 transition-colors"><Share2 size={15} /></button>
                       </div>
                     </div>
                   </div>

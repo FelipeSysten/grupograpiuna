@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Tv, Newspaper, Mic, Video, Info, LayoutDashboard, Eye } from 'lucide-react';
+import { Menu, X, Tv, Newspaper, Mic, Video, Info, LayoutDashboard, Eye, ShoppingBag } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { useAuth } from '../hooks/useAuth';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -27,6 +27,7 @@ export const Navbar = () => {
     { name: 'Notícias', path: '/noticias', icon: Newspaper },
     { name: 'HUB73', path: '/hub73', icon: Video },
     { name: 'Podcasts', path: '/podcasts', icon: Mic },
+    { name: 'Loja', path: '/loja', icon: ShoppingBag },
   ];
 
   return (

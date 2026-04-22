@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(wc -l src/components/Admin*.tsx src/components/AdBanner.tsx src/components/ImageUploadField.tsx)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm install *)",
+      "Bash(npm list *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
