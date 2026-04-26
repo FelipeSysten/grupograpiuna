@@ -115,6 +115,11 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() || isEditor();
     }
 
+    match /tv_channels/{channelId=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() || isEditor();
+    }
+
     match /ads/{adId=**} {
       allow read: if true;
       allow create, update, delete: if isAdmin() || isEditor();

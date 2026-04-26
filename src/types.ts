@@ -59,3 +59,9 @@ export interface YouTubeVideo {
   publishedAt: string;
   views?: number;
 }
+
+export interface TVChannel {
+  id?: string;
+  name: string;
+  url: string;
+}

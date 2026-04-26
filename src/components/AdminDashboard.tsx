@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { loginWithGoogle, logout } from '../firebase';
-import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube, BarChart3, Smartphone, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Newspaper, Tv, Image as ImageIcon, LogOut, LogIn, ChevronRight, Briefcase, Mic, Youtube, BarChart3, Smartphone, ShoppingBag, Radio } from 'lucide-react';
 import { AdminNews } from './AdminNews';
 import { AdminSchedule } from './AdminSchedule';
 import { AdminAds } from './AdminAds';
@@ -11,10 +11,11 @@ import { AdminVideos } from './AdminVideos';
 import { AdminAnalytics } from './AdminAnalytics';
 import { AdminStories } from './AdminStories';
 import { AdminShop } from './AdminShop';
+import { AdminLiveChannels } from './AdminLiveChannels';
 
 export const AdminDashboard = () => {
   const { user, role, loading, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'news' | 'schedule' | 'ads' | 'hub73' | 'podcasts' | 'videos' | 'stories' | 'shop'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'news' | 'schedule' | 'channels' | 'ads' | 'hub73' | 'podcasts' | 'videos' | 'stories' | 'shop'>('analytics');
 
   if (loading) {
     return (
@@ -70,6 +71,7 @@ export const AdminDashboard = () => {
             { id: 'analytics', label: 'Audiência', icon: BarChart3 },
             { id: 'news', label: 'Notícias', icon: Newspaper },
             { id: 'schedule', label: 'TV Grade', icon: Tv },
+            { id: 'channels', label: 'Canais TV', icon: Radio },
             { id: 'ads', label: 'Publicidade', icon: ImageIcon },
             { id: 'hub73', label: 'Hub73', icon: Briefcase },
             { id: 'podcasts', label: 'Podcasts', icon: Mic },
@@ -118,6 +120,7 @@ export const AdminDashboard = () => {
           {activeTab === 'analytics' && <AdminAnalytics />}
           {activeTab === 'news' && <AdminNews />}
           {activeTab === 'schedule' && <AdminSchedule />}
+          {activeTab === 'channels' && <AdminLiveChannels />}
           {activeTab === 'ads' && <AdminAds />}
           {activeTab === 'hub73' && <AdminHub73 />}
           {activeTab === 'podcasts' && <AdminPodcasts />}

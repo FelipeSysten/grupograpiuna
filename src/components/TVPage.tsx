@@ -4,12 +4,13 @@ import { motion } from 'motion/react';
 import { Play, Calendar, MessageSquare, Share2, Send, LogIn, Tv, Minimize2, Maximize, Maximize2 } from 'lucide-react';
 import { AdBanner } from './AdBanner';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, limit, doc } from 'firebase/firestore';
+import { TVChannel } from '../types';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, loginWithGoogle } from '../firebase';
 import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
-const TV_CHANNELS = [
+const FALLBACK_CHANNELS: TVChannel[] = [
   { name: 'BAND BAHIA',                      url: 'https://hplay.tv:443/jaypereiratvweb/112254789/175.m3u8' },
   { name: 'GLOBO BA',                        url: 'https://hplay.tv:443/jaypereiratvweb/112254789/172.m3u8' },
   { name: 'GLOBO BA | JUAZEIRO',             url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7299.m3u8' },
@@ -28,7 +29,8 @@ export const TVPage = () => {
   const [currentProgram, setCurrentProgram] = useState<ScheduleItem | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [liveConfig, setLiveConfig] = useState<any>(null);
-  const [selectedChannel, setSelectedChannel] = useState<{ name: string; url: string } | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<TVChannel | null>(null);
+  const [channels, setChannels] = useState<TVChannel[]>(FALLBACK_CHANNELS);
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
 
   const [messages, setMessages] = useState<any[]>([]);
@@ -51,6 +53,16 @@ export const TVPage = () => {
     const unsub = onSnapshot(doc(db, 'live_config', 'current'), (snap) => {
       if (snap.exists()) setLiveConfig(snap.data());
     });
+    return () => unsub();
+  }, []);
+
+  // ── Canais ao vivo ────────────────────────────────────────────────────────
+  useEffect(() => {
+    const q = query(collection(db, 'tv_channels'), orderBy('name', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as TVChannel));
+      setChannels(data.length > 0 ? data : FALLBACK_CHANNELS);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'tv_channels'));
     return () => unsub();
   }, []);
 
@@ -121,7 +133,7 @@ export const TVPage = () => {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   /** Seleciona um canal HLS; descarta YouTube da grade */
-  const handleChannelSelect = (channel: { name: string; url: string }) => {
+  const handleChannelSelect = (channel: TVChannel) => {
     setSelectedVideoId(null);
     setSelectedChannel(channel);
     // O carregamento HLS ocorre no useEffect acima, após o re-render
@@ -416,7 +428,7 @@ export const TVPage = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {TV_CHANNELS.map((ch) => {
+            {channels.map((ch) => {
               const isActive = selectedChannel?.url === ch.url;
               return (
                 <motion.button
