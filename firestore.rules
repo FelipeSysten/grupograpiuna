@@ -74,6 +74,14 @@ service cloud.firestore {
              data.createdAt == request.time;
     }
 
+    function isValidComment(data) {
+      return data.keys().hasAll(['text', 'userId', 'userName', 'createdAt']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 500 &&
+             data.userId == request.auth.uid &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
+             data.createdAt == request.time;
+    }
+
     function isValidHub73(data) {
       return data.keys().hasAll(['title', 'description', 'imageUrl', 'createdAt']) &&
              data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
@@ -94,6 +102,12 @@ service cloud.firestore {
     match /news/{newsId=**} {
       allow read: if true;
       allow create, update, delete: if isAdmin() || isEditor();
+    }
+
+    match /news/{newsId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidComment(request.resource.data);
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
     }
 
     match /tv_schedule/{scheduleId=**} {

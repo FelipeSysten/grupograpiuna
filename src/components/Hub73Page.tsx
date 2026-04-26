@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Youtube, Eye } from 'lucide-react';
+import { Play, Youtube, Eye, Minimize2, Maximize2, Expand } from 'lucide-react';
 import {
   collection,
   onSnapshot,
@@ -97,8 +97,10 @@ export const Hub73Page = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<HubVideo | null>(null);
   const [autoplay, setAutoplay] = useState(false);
+  const [playerSize, setPlayerSize] = useState<'sm' | 'lg'>('lg');
 
   const playerRef = useRef<HTMLDivElement>(null);
+  const fsRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const initializedRef = useRef(false);
@@ -176,6 +178,16 @@ export const Hub73Page = () => {
     }, 50);
   };
 
+  const handleFullscreen = () => {
+    const el = fsRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      el.requestFullscreen();
+    }
+  };
+
   const incrementViews = async (video: YouTubeVideo) => {
     try {
       await updateDoc(doc(db, 'youtube_videos', video.id), {
@@ -196,40 +208,6 @@ export const Hub73Page = () => {
     <div className="min-h-screen bg-white">
 
       {/* ════════════════════════════════════════════════════════════════════
-          1. HERO — Imagem de fundo + logo centralizado + CTA
-      ═════════════════════════════════════════════════════════════════════ */}
-      <section className="relative flex items-center justify-center overflow-hidden"
-        style={{ minHeight: '36vh' }}>
-        {/* Imagem de fundo */}
-        <img
-          src="/assets/pagehub73.png"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        {/* Overlay escuro */}
-        <div className="absolute inset-0 bg-black/65" />
-
-        {/* Conteúdo centralizado */}
-        <div className="relative z-10 flex flex-col items-center text-center px-6 py-8">
-          <img
-            src="/assets/hub73.png"
-            alt="HUB73 PRODUTORA"
-            className="h-10 md:h-14 w-auto object-contain mb-4 drop-shadow-2xl"
-          />
-          <p className="text-gray-300 text-sm max-w-md leading-relaxed mb-6">
-            Produção audiovisual que transforma ideias em experiências.
-            Comerciais, eventos, institucionais e muito mais.
-          </p>
-          <a
-            href="/anuncie"
-            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-widest text-xs px-6 py-3 rounded-xl transition-colors shadow-lg shadow-red-900/40"
-          >
-            Solicitar Orçamento
-          </a>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
           2. PLAYER DE DESTAQUE — carrega o vídeo selecionado na grade
       ═════════════════════════════════════════════════════════════════════ */}
       <section
@@ -242,23 +220,50 @@ export const Hub73Page = () => {
           ) : selectedVideo ? (
             <>
               {/* Player */}
-              <div className="w-full bg-black rounded-2xl overflow-hidden border border-gray-800/60 shadow-[0_0_80px_rgba(0,0,0,0.9)]">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedVideo.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="relative aspect-video w-full bg-black"
+              <div className={`transition-all duration-300 ${playerSize === 'sm' ? 'max-w-2xl mx-auto' : 'w-full'}`}>
+                {/* Controles de tamanho */}
+                <div className="flex items-center justify-end gap-1.5 mb-2">
+                  <button
+                    onClick={() => setPlayerSize('sm')}
+                    title="Tela menor"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'sm' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
                   >
-                    <VideoPlayer
-                      video={selectedVideo}
-                      autoplay={autoplay}
-                      videoRef={videoRef}
-                    />
-                  </motion.div>
-                </AnimatePresence>
+                    <Minimize2 size={12} /> Menor
+                  </button>
+                  <button
+                    onClick={() => setPlayerSize('lg')}
+                    title="Tela maior"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'lg' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                  >
+                    <Maximize2 size={12} /> Maior
+                  </button>
+                  <button
+                    onClick={handleFullscreen}
+                    title="Tela completa"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                  >
+                    <Expand size={12} /> Completa
+                  </button>
+                </div>
+
+                <div ref={fsRef} className="w-full bg-black rounded-2xl overflow-hidden border border-gray-800/60 shadow-[0_0_80px_rgba(0,0,0,0.9)]">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={selectedVideo.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="relative aspect-video w-full bg-black"
+                    >
+                      <VideoPlayer
+                        video={selectedVideo}
+                        autoplay={autoplay}
+                        videoRef={videoRef}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Info abaixo do player */}
@@ -324,9 +329,9 @@ export const Hub73Page = () => {
 
           {/* Grade */}
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-video bg-gray-200 rounded-2xl animate-pulse" />
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="aspect-video bg-gray-200 rounded-xl animate-pulse" />
               ))}
             </div>
           ) : filteredVideos.length === 0 ? (
@@ -336,7 +341,7 @@ export const Hub73Page = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {filteredVideos.map((video) => {
                 const isActive = selectedVideo?.id === video.id;
                 return (
@@ -346,7 +351,7 @@ export const Hub73Page = () => {
                     animate={{ opacity: 1 }}
                     key={video.id}
                     onClick={() => selectVideo(video)}
-                    className={`group relative aspect-video bg-gray-900 rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 ${
+                    className={`group relative aspect-video bg-gray-900 rounded-xl overflow-hidden cursor-pointer transition-all duration-200 ${
                       isActive
                         ? 'ring-2 ring-red-600 ring-offset-2 ring-offset-gray-50 shadow-lg shadow-red-100'
                         : 'ring-2 ring-transparent hover:ring-gray-300 shadow-sm hover:shadow-md'
@@ -373,8 +378,8 @@ export const Hub73Page = () => {
                           {video.description}
                         </p>
                       )}
-                      <div className="w-11 h-11 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
-                        <Play size={18} fill="white" color="white" className="ml-0.5" />
+                      <div className="w-6 h-6 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+                        <Play size={10} fill="white" color="white" className="ml-0.5" />
                       </div>
                     </div>
 
@@ -445,8 +450,8 @@ export const Hub73Page = () => {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
-                          <Play size={22} fill="white" color="white" className="ml-0.5" />
+                        <div className="w-9 h-9 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+                          <Play size={16} fill="white" color="white" className="ml-0.5" />
                         </div>
                       </div>
                     </div>

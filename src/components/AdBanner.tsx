@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot, limit } from 'firebase/firestore'
 import { db } from '../firebase';
 
 interface AdBannerProps {
-  size: 'leaderboard' | 'sidebar' | 'mobile' | 'cover';
+  size: 'leaderboard' | 'sidebar' | 'mobile' | 'intermediario';
   page?: string;
   className?: string;
 }
@@ -36,29 +36,29 @@ export const AdBanner = ({ size, page, className }: AdBannerProps) => {
     return () => unsubscribe();
   }, [size, page]);
 
-  const dimensions = {
-    leaderboard: { width: '100%', height: '90px', label: '970x90 Leaderboard' },
-    sidebar: { width: '300px', height: '250px', label: '300x250 Sidebar' },
-    mobile: { width: '320px', height: '50px', label: '320x50 Mobile' },
-    cover: { width: '100%', height: 'auto', label: 'Capa Estilo YouTube' },
+  const sizeClasses = {
+    leaderboard:  'w-full max-w-[970px] h-[90px]',
+    intermediario:'w-full max-w-[728px] h-[90px]',
+    sidebar:      'w-[300px] h-[250px]',
+    mobile:       'w-full max-w-[320px] h-[50px]',
   };
 
-  const { label } = dimensions[size];
+  const labels = {
+    leaderboard:  'Leaderboard 970×90',
+    intermediario:'Intermediário 728×90',
+    sidebar:      'Sidebar 300×250',
+    mobile:       'Mobile 320×50',
+  };
+
+  const cls = sizeClasses[size];
 
   if (ad) {
     return (
-      <a 
-        href={ad.link} 
-        target="_blank" 
-        rel="noreferrer"
-        className={cn(
-          "block rounded-lg overflow-hidden mx-auto transition-transform hover:scale-[1.01]",
-          size === 'leaderboard' && "w-full max-w-[970px] h-[90px]",
-          size === 'sidebar' && "w-[300px] h-[250px]",
-          size === 'mobile' && "w-[320px] h-[50px]",
-          size === 'cover' && "w-full aspect-[16/4] md:aspect-[16/3]",
-          className
-        )}
+      <a
+        href={ad.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn('block rounded-lg overflow-hidden mx-auto transition-transform hover:scale-[1.01]', cls, className)}
       >
         <img src={ad.imageUrl} alt="Publicidade" className="w-full h-full object-cover" />
       </a>
@@ -66,19 +66,10 @@ export const AdBanner = ({ size, page, className }: AdBannerProps) => {
   }
 
   return (
-    <div 
-      className={cn(
-        "bg-gray-100 border border-gray-200 flex items-center justify-center rounded-lg overflow-hidden mx-auto",
-        size === 'leaderboard' && "w-full max-w-[970px] h-[90px]",
-        size === 'sidebar' && "w-[300px] h-[250px]",
-        size === 'mobile' && "w-[320px] h-[50px]",
-        size === 'cover' && "w-full aspect-[16/4] md:aspect-[16/3]",
-        className
-      )}
-    >
+    <div className={cn('bg-gray-100 border border-gray-200 flex items-center justify-center rounded-lg overflow-hidden mx-auto', cls, className)}>
       <div className="text-center">
         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Publicidade</span>
-        <span className="text-[10px] font-medium text-gray-300 uppercase">{label}</span>
+        <span className="text-[10px] font-medium text-gray-300 uppercase">{labels[size]}</span>
       </div>
     </div>
   );

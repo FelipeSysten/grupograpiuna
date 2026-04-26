@@ -42,6 +42,15 @@ export interface ScheduleItem {
   youtubeUrl?: string;
 }
 
+export interface NewsComment {
+  id?: string;
+  text: string;
+  userId: string;
+  userName: string;
+  userPhoto?: string | null;
+  createdAt?: any;
+}
+
 export interface YouTubeVideo {
   id: string;
   title: string;

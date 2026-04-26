@@ -15,11 +15,11 @@ const AD_SIZES = [
     previewRatio: 'aspect-[970/90] min-h-[48px]',
   },
   {
-    key: 'cover',
-    label: 'Capa',
-    dims: 'Largura total',
-    desc: 'Banner de capa — TV Grapiúna (entre player e grade)',
-    previewRatio: 'aspect-[970/250]',
+    key: 'intermediario',
+    label: 'Intermediário',
+    dims: '728 × 90 px',
+    desc: 'Banner intermediário — entre seções de conteúdo',
+    previewRatio: 'aspect-[728/90] min-h-[48px]',
   },
   {
     key: 'sidebar',
@@ -43,7 +43,7 @@ const PAGE_LABELS: Record<string, string> = {
   home: 'Home',
   tv: 'TV',
   noticias: 'Notícias',
-  hub73: 'Hub73',
+  hub73: 'Canais ao Vivo',
   podcasts: 'Podcasts',
 };
 
@@ -55,7 +55,7 @@ export const AdminAds = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM });
   const [openSections, setOpenSections] = useState<Set<SizeKey>>(
-    new Set(['leaderboard', 'cover', 'sidebar', 'mobile'])
+    new Set(['leaderboard', 'intermediario', 'sidebar', 'mobile'])
   );
 
   useEffect(() => {

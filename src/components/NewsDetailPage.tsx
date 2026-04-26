@@ -1,16 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { doc, getDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { db, auth, loginWithGoogle } from '../firebase';
 import { motion } from 'motion/react';
-import { Clock, User, ArrowLeft, Share2, Facebook, Twitter, MessageCircle, ExternalLink } from 'lucide-react';
+import { Clock, User, ArrowLeft, Share2, Facebook, Twitter, MessageCircle, ExternalLink, Send, LogIn, Trash2 } from 'lucide-react';
 import Markdown from 'react-markdown';
 import { AdBanner } from './AdBanner';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { NewsComment } from '../types';
 
 export const NewsDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [comments, setComments] = useState<NewsComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -31,6 +39,51 @@ export const NewsDetailPage = () => {
     fetchNews();
     window.scrollTo(0, 0);
   }, [id]);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    const q = query(collection(db, 'news', id, 'comments'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(
+      q,
+      (snap) => setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewsComment))),
+      (err) => handleFirestoreError(err, OperationType.LIST, 'comments'),
+    );
+    return () => unsub();
+  }, [id]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user || !id) return;
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'news', id, 'comments'), {
+        text: newComment.trim(),
+        userId: user.uid,
+        userName: user.displayName || 'Anônimo',
+        userPhoto: user.photoURL || null,
+        createdAt: serverTimestamp(),
+      });
+      setNewComment('');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'comments');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!id) return;
+    try {
+      await deleteDoc(doc(db, 'news', id, 'comments', commentId));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'comments');
+    }
+  };
 
   if (loading) {
     return (
@@ -82,7 +135,7 @@ export const NewsDetailPage = () => {
           <span className="bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded uppercase mb-6 inline-block">
             {news.category}
           </span>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-tight mb-8">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tighter leading-tight mb-8">
             {news.title}
           </h1>
           
@@ -127,9 +180,9 @@ export const NewsDetailPage = () => {
         </div>
 
         {/* Content */}
-        <div className="prose prose-lg max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-red prose-img:rounded-xl">
+        <div className="prose prose-lg max-w-none prose-headings:font-black prose-headings:tracking-tighter prose-red prose-img:rounded-xl prose-p:mb-5 prose-p:leading-relaxed prose-p:text-justify">
           <div className="markdown-body">
-            <Markdown>{news.content}</Markdown>
+            <Markdown>{news.content?.replace(/\n(?!\n)/g, '\n\n') ?? ''}</Markdown>
           </div>
         </div>
 
@@ -194,6 +247,112 @@ export const NewsDetailPage = () => {
             </div>
           );
         })()}
+
+        {/* Comments */}
+        <section className="mt-16 pt-10 border-t border-gray-100">
+          <h2 className="text-2xl font-black tracking-tighter uppercase flex items-center gap-3 mb-8">
+            <MessageCircle size={22} className="text-red-600" />
+            Comentários
+            <span className="text-base font-bold text-gray-400">({comments.length})</span>
+          </h2>
+
+          {/* Form */}
+          {user ? (
+            <form onSubmit={handleSubmitComment} className="mb-10">
+              <div className="flex gap-3">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full shrink-0 object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                    <User size={18} className="text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <textarea
+                    ref={textareaRef}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Deixe seu comentário..."
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-red-400 resize-none transition-colors"
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-gray-400">{newComment.length}/500</span>
+                    <button
+                      type="submit"
+                      disabled={!newComment.trim() || submitting}
+                      className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Send size={13} /> {submitting ? 'Enviando...' : 'Comentar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <div className="mb-10 p-6 bg-gray-50 rounded-2xl text-center border border-gray-100">
+              <p className="text-gray-500 text-sm mb-4">Faça login para deixar um comentário</p>
+              <button
+                onClick={loginWithGoogle}
+                className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors"
+              >
+                <LogIn size={15} /> Entrar com Google
+              </button>
+            </div>
+          )}
+
+          {/* List */}
+          <div className="space-y-5">
+            {comments.length === 0 ? (
+              <div className="text-center py-10 text-gray-300">
+                <MessageCircle size={32} className="mx-auto mb-3 opacity-40" />
+                <p className="text-sm">Seja o primeiro a comentar!</p>
+              </div>
+            ) : (
+              comments.map((comment) => (
+                <motion.div
+                  key={comment.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-3"
+                >
+                  {comment.userPhoto ? (
+                    <img src={comment.userPhoto} alt="" referrerPolicy="no-referrer" className="w-9 h-9 rounded-full shrink-0 object-cover" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                      <User size={16} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="bg-gray-50 rounded-xl px-4 py-3">
+                      <div className="flex items-center justify-between mb-1 gap-2">
+                        <span className="text-sm font-bold text-gray-900">{comment.userName}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] text-gray-400">
+                            {comment.createdAt?.seconds
+                              ? new Date(comment.createdAt.seconds * 1000).toLocaleString('pt-BR')
+                              : ''}
+                          </span>
+                          {user?.uid === comment.userId && (
+                            <button
+                              onClick={() => comment.id && handleDeleteComment(comment.id)}
+                              className="text-gray-300 hover:text-red-500 transition-colors"
+                              title="Excluir comentário"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed">{comment.text}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </section>
 
         {/* Footer Ad */}
         <div className="mt-16 py-12 border-t border-gray-100">

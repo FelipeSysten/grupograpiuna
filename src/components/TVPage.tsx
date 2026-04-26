@@ -181,7 +181,7 @@ export const TVPage = () => {
 
       {/* ── 1. Banner topo ─────────────────────────────────────────────────── */}
       <div className="bg-black border-b border-gray-800">
-        <AdBanner size="cover" page="tv" />
+        <AdBanner size="leaderboard" page="tv" />
       </div>
 
       {/* ── 2. Player + Chat ───────────────────────────────────────────────── */}
@@ -308,11 +308,9 @@ export const TVPage = () => {
               </div>
 
               {/* Ad banners */}
-              <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-square" />
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" />
               </div>
             </div>
 
