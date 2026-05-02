@@ -41,6 +41,7 @@ export const TVPage = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const playerWrapperRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -76,7 +77,11 @@ export const TVPage = () => {
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isInitialMount.current) {
+      if (messages.length > 0) isInitialMount.current = false;
+      return;
+    }
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages]);
 
   // ── Schedule ──────────────────────────────────────────────────────────────
