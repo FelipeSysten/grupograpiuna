@@ -19,3 +19,10 @@
   scrollbar-width: none;
 }
 
+.markdown-body p,
+.markdown-body ul,
+.markdown-body ol {
+  text-align: justify;
+  margin-bottom: 1.5em;
+}
+
