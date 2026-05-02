@@ -56,8 +56,8 @@ export const NewsPage = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Top Ad */}
-        <div className="mb-12">
+        {/* Top Ad — Sticky Banner */}
+        <div className="sticky top-28 z-40 mb-12 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 bg-white/95 backdrop-blur-md shadow-md border-b border-gray-100">
           <AdBanner size="leaderboard" />
         </div>
 
