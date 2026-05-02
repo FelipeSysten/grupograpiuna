@@ -196,9 +196,9 @@ export const TVPage = () => {
   return (
     <div className="bg-gray-950 min-h-screen text-white">
 
-      {/* ── 1. Banner topo ─────────────────────────────────────────────────── */}
-      <div className="bg-black border-b border-gray-800">
-        <AdBanner size="leaderboard" page="tv" />
+      {/* ── 1. Banner topo — Capa de Canal ─────────────────────────────────── */}
+      <div className="bg-black border-b border-gray-800 px-4 sm:px-6 lg:px-8 py-6">
+        <AdBanner size="cover" page="tv" />
       </div>
 
       {/* ── 2. Player + Chat ───────────────────────────────────────────────── */}

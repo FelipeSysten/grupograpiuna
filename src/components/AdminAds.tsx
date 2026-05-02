@@ -8,6 +8,13 @@ import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 // Metadados de cada tamanho de banner
 const AD_SIZES = [
   {
+    key: 'cover',
+    label: 'Capa TV (Topo)',
+    dims: '1600 × 320 px',
+    desc: 'Capa de canal — topo da rota /tv (proporção 5:1)',
+    previewRatio: 'aspect-[5/1]',
+  },
+  {
     key: 'leaderboard',
     label: 'Leaderboard',
     dims: '970 × 90 px',
@@ -55,7 +62,7 @@ export const AdminAds = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<typeof EMPTY_FORM>({ ...EMPTY_FORM });
   const [openSections, setOpenSections] = useState<Set<SizeKey>>(
-    new Set(['leaderboard', 'intermediario', 'sidebar', 'mobile'])
+    new Set(['cover', 'leaderboard', 'intermediario', 'sidebar', 'mobile'])
   );
 
   useEffect(() => {
