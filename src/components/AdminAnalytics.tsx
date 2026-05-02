@@ -6,7 +6,33 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2 } from 'lucide-react';
+import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio } from 'lucide-react';
+
+// YouTube Data API v3 — chave nunca hardcoded, sempre via variáveis de ambiente do Vite
+const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined;
+// ID do canal @tv.grapiuna (UC...) — obtenha em "view-source" do canal e substitua abaixo
+const YOUTUBE_CHANNEL_ID = 'UC8FpJmkFOGjIjKz8wi02ctQ';
+
+const fetchLiveViewers = async (): Promise<number> => {
+  if (!YOUTUBE_API_KEY || YOUTUBE_CHANNEL_ID.startsWith('UC_TV_GRAPIUNA')) return 0;
+  try {
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${YOUTUBE_CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return 0;
+    const searchData = await searchRes.json();
+    const liveVideoId: string | undefined = searchData.items?.[0]?.id?.videoId;
+    if (!liveVideoId) return 0;
+
+    const videoUrl = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${liveVideoId}&key=${YOUTUBE_API_KEY}`;
+    const videoRes = await fetch(videoUrl);
+    if (!videoRes.ok) return 0;
+    const videoData = await videoRes.json();
+    const concurrent = videoData.items?.[0]?.liveStreamingDetails?.concurrentViewers;
+    return concurrent ? parseInt(concurrent, 10) : 0;
+  } catch {
+    return 0;
+  }
+};
 
 const PATH_LABELS: Record<string, string> = {
   '_': 'Início',
@@ -50,10 +76,32 @@ const StatCard = ({ title, value, icon: Icon, color }: {
   </div>
 );
 
+const LiveStatCard = ({ viewers }: { viewers: number }) => (
+  <div className="bg-white p-6 rounded-3xl border border-red-100 shadow-sm ring-1 ring-red-50 relative overflow-hidden">
+    <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-50 rounded-full opacity-60 pointer-events-none" />
+    <div className="relative">
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-3 rounded-2xl bg-red-600 text-white">
+          <Radio size={20} />
+        </div>
+        <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase tracking-widest bg-red-50 px-2 py-1 rounded-full">
+          <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
+          Ao Vivo
+        </span>
+      </div>
+      <h3 className="text-gray-500 text-sm font-medium mb-1">Audiência YouTube</h3>
+      <p className="text-3xl font-black tracking-tighter text-gray-900">
+        {viewers.toLocaleString('pt-BR')}
+      </p>
+    </div>
+  </div>
+);
+
 export const AdminAnalytics = () => {
   const [stats, setStats] = useState<any>(null);
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveViewers, setLiveViewers] = useState<number>(0);
 
   useEffect(() => {
     const unsubStats = onSnapshot(doc(db, 'site_stats', 'global'), (snap) => {
@@ -69,34 +117,45 @@ export const AdminAnalytics = () => {
     return () => { unsubStats(); unsubVideos(); };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    const update = async () => {
+      const n = await fetchLiveViewers();
+      if (alive) setLiveViewers(n);
+    };
+    update();
+    const id = setInterval(update, 30_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
   if (loading) return <div className="animate-pulse h-96 bg-gray-100 rounded-3xl" />;
 
   // ── Daily Accesses — sort by YYYY-MM-DD first, then format to DD/MM ────────
   const dailyData = stats?.dailyStats
     ? Object.entries(stats.dailyStats as Record<string, number>)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .slice(-14)
-        .map(([date, count]) => {
-          const [, mm, dd] = date.split('-');
-          return { date: `${dd}/${mm}`, count };
-        })
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([date, count]) => {
+        const [, mm, dd] = date.split('-');
+        return { date: `${dd}/${mm}`, count };
+      })
     : [];
 
   // ── Top Pages ─────────────────────────────────────────────────────────────
   const pageData = stats?.pageViews
     ? Object.entries(stats.pageViews as Record<string, number>)
-        .map(([key, count]) => ({ name: pathLabel(key), count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 7)
+      .map(([key, count]) => ({ name: pathLabel(key), count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 7)
     : [];
 
   // ── Device Distribution ───────────────────────────────────────────────────
   const desktop = stats?.deviceStats?.desktop ?? 0;
-  const mobile  = stats?.deviceStats?.mobile  ?? 0;
+  const mobile = stats?.deviceStats?.mobile ?? 0;
   const hasDeviceData = desktop + mobile > 0;
   const deviceData = [
     { name: 'Desktop', value: desktop, color: '#2563eb' },
-    { name: 'Mobile',  value: mobile,  color: '#ef4444' },
+    { name: 'Mobile', value: mobile, color: '#ef4444' },
   ];
 
   // ── Top Videos ────────────────────────────────────────────────────────────
@@ -120,11 +179,12 @@ export const AdminAnalytics = () => {
       </div>
 
       {/* ── Summary Cards ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Acessos Totais"          value={stats?.totalAccesses}        icon={Eye}       color="bg-blue-600"   />
-        <StatCard title="Views de Vídeos"          value={totalVideoViews}              icon={TrendingUp} color="bg-red-600"    />
-        <StatCard title="Acessos Mobile"           value={stats?.deviceStats?.mobile}   icon={Smartphone} color="bg-orange-600" />
-        <StatCard title="Acessos Desktop"          value={stats?.deviceStats?.desktop}  icon={Monitor}    color="bg-indigo-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <LiveStatCard viewers={liveViewers} />
+        <StatCard title="Acessos Totais" value={stats?.totalAccesses} icon={Eye} color="bg-blue-600" />
+        <StatCard title="Views de Vídeos" value={totalVideoViews} icon={TrendingUp} color="bg-red-600" />
+        <StatCard title="Acessos Mobile" value={stats?.deviceStats?.mobile} icon={Smartphone} color="bg-orange-600" />
+        <StatCard title="Acessos Desktop" value={stats?.deviceStats?.desktop} icon={Monitor} color="bg-indigo-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
