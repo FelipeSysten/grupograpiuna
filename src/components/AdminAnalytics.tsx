@@ -8,33 +8,44 @@ import {
 } from 'recharts';
 import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film } from 'lucide-react';
 
-// Estatísticas do canal YouTube — resolvidas pelo backend em /api/youtube/live.
-// API Key e Channel ID ficam apenas no servidor (process.env), nunca no bundle.
-type YoutubeStats = {
-  viewers: number;
-  isLive: boolean;
-  subscribers: number;
-  totalViews: number;
-  videoCount: number;
-  channelTitle: string;
-};
-const EMPTY_YT_STATS: YoutubeStats = {
-  viewers: 0, isLive: false, subscribers: 0, totalViews: 0, videoCount: 0, channelTitle: '',
-};
+// Estatísticas do YouTube vêm de dois endpoints separados, com TTLs distintos
+// para respeitar a quota diária da YouTube Data API (10.000 units):
+//   /api/youtube/live    — search.list (100u/chamada) — atualiza a cada 5min
+//   /api/youtube/channel — channels.list (1u/chamada) — atualiza a cada 30min
+type YoutubeLive    = { viewers: number; isLive: boolean };
+type YoutubeChannel = { subscribers: number; totalViews: number; videoCount: number; channelTitle: string };
 
-const fetchYoutubeStats = async (): Promise<YoutubeStats> => {
+const EMPTY_LIVE:    YoutubeLive    = { viewers: 0, isLive: false };
+const EMPTY_CHANNEL: YoutubeChannel = { subscribers: 0, totalViews: 0, videoCount: 0, channelTitle: '' };
+
+const fetchYoutubeLive = async (): Promise<YoutubeLive> => {
   try {
     const res = await fetch('/api/youtube/live');
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      console.error('[youtube/live] backend respondeu não-OK', res.status, body);
-      return EMPTY_YT_STATS;
-    }
+    if (!res.ok) return EMPTY_LIVE;
     const data = await res.json();
-    return { ...EMPTY_YT_STATS, ...data };
+    if (data.errors) console.warn('[youtube/live] errors', data.errors);
+    return { viewers: data.viewers ?? 0, isLive: !!data.isLive };
   } catch (err) {
-    console.error('[youtube/live] falha ao consultar backend', err);
-    return EMPTY_YT_STATS;
+    console.error('[youtube/live] falha', err);
+    return EMPTY_LIVE;
+  }
+};
+
+const fetchYoutubeChannel = async (): Promise<YoutubeChannel> => {
+  try {
+    const res = await fetch('/api/youtube/channel');
+    if (!res.ok) return EMPTY_CHANNEL;
+    const data = await res.json();
+    if (data.error) console.warn('[youtube/channel] error', data.error);
+    return {
+      subscribers: data.subscribers ?? 0,
+      totalViews: data.totalViews ?? 0,
+      videoCount: data.videoCount ?? 0,
+      channelTitle: data.channelTitle ?? '',
+    };
+  } catch (err) {
+    console.error('[youtube/channel] falha', err);
+    return EMPTY_CHANNEL;
   }
 };
 
@@ -121,7 +132,8 @@ export const AdminAnalytics = () => {
   const [stats, setStats] = useState<any>(null);
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [yt, setYt] = useState<YoutubeStats>(EMPTY_YT_STATS);
+  const [live, setLive] = useState<YoutubeLive>(EMPTY_LIVE);
+  const [channel, setChannel] = useState<YoutubeChannel>(EMPTY_CHANNEL);
 
   useEffect(() => {
     const unsubStats = onSnapshot(doc(db, 'site_stats', 'global'), (snap) => {
@@ -137,14 +149,27 @@ export const AdminAnalytics = () => {
     return () => { unsubStats(); unsubVideos(); };
   }, []);
 
+  // Live audience — cara (100u por origin hit). Edge cache 15min, client poll 5min.
   useEffect(() => {
     let alive = true;
     const update = async () => {
-      const data = await fetchYoutubeStats();
-      if (alive) setYt(data);
+      const data = await fetchYoutubeLive();
+      if (alive) setLive(data);
     };
     update();
-    const id = setInterval(update, 30_000);
+    const id = setInterval(update, 5 * 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  // Channel stats — barata (1u). Edge cache 1h, client poll 30min.
+  useEffect(() => {
+    let alive = true;
+    const update = async () => {
+      const data = await fetchYoutubeChannel();
+      if (alive) setChannel(data);
+    };
+    update();
+    const id = setInterval(update, 30 * 60_000);
     return () => { alive = false; clearInterval(id); };
   }, []);
 
@@ -201,13 +226,13 @@ export const AdminAnalytics = () => {
       <div>
         <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3 flex items-center gap-2">
           <Youtube size={14} className="text-red-600" />
-          Canal {yt.channelTitle ? `· ${yt.channelTitle}` : 'YouTube'}
+          Canal {channel.channelTitle ? `· ${channel.channelTitle}` : 'YouTube'}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <LiveStatCard viewers={yt.viewers} isLive={yt.isLive} />
-          <StatCard title="Inscritos do Canal"      value={yt.subscribers} icon={Users} color="bg-red-600" />
-          <StatCard title="Visualizações Totais"    value={yt.totalViews}  icon={Eye}   color="bg-red-500" />
-          <StatCard title="Vídeos Publicados"       value={yt.videoCount}  icon={Film}  color="bg-red-700" />
+          <LiveStatCard viewers={live.viewers} isLive={live.isLive} />
+          <StatCard title="Inscritos do Canal"   value={channel.subscribers} icon={Users} color="bg-red-600" />
+          <StatCard title="Visualizações Totais" value={channel.totalViews}  icon={Eye}   color="bg-red-500" />
+          <StatCard title="Vídeos Publicados"    value={channel.videoCount}  icon={Film}  color="bg-red-700" />
         </div>
       </div>
 

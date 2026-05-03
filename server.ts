@@ -19,17 +19,13 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // Espelha o serverless de produção em api/youtube/live.ts para dev local
+  // Espelha api/youtube/live.ts (caro, search.list = 100u; cache 15min na Vercel)
   app.get("/api/youtube/live", async (_req, res) => {
     const API_KEY = process.env.YOUTUBE_API_KEY;
     const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
 
     if (!API_KEY || !CHANNEL_ID) {
-      res.status(500).json({
-        error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID",
-        hasKey: !!API_KEY,
-        hasChannelId: !!CHANNEL_ID,
-      });
+      res.status(500).json({ error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID" });
       return;
     }
 
@@ -41,11 +37,7 @@ async function startServer() {
     const errors: ApiError[] = [];
 
     try {
-      const [searchRes, channelRes] = await Promise.all([
-        fetch(`https://www.googleapis.com/youtube/v3/search?part=id&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`),
-        fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${CHANNEL_ID}&key=${API_KEY}`),
-      ]);
-
+      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=id&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${API_KEY}`);
       let viewers = 0;
       let isLive = false;
       if (searchRes.ok) {
@@ -66,30 +58,51 @@ async function startServer() {
         errors.push(await readErr(searchRes, "search"));
       }
 
-      let subscribers = 0;
-      let totalViews = 0;
-      let videoCount = 0;
-      let channelTitle = "";
-      if (channelRes.ok) {
-        const channelData = await channelRes.json();
-        const stats = channelData.items?.[0]?.statistics;
-        const snippet = channelData.items?.[0]?.snippet;
-        if (stats) {
-          subscribers = parseInt(stats.subscriberCount ?? "0", 10);
-          totalViews = parseInt(stats.viewCount ?? "0", 10);
-          videoCount = parseInt(stats.videoCount ?? "0", 10);
-        }
-        if (snippet) channelTitle = snippet.title ?? "";
-      } else {
-        errors.push(await readErr(channelRes, "channels"));
-      }
-
-      const payload: any = { viewers, isLive, subscribers, totalViews, videoCount, channelTitle };
+      const payload: any = { viewers, isLive };
       if (errors.length) payload.errors = errors;
       res.status(200).json(payload);
     } catch (err) {
       console.error("[youtube/live] exception", err);
-      res.status(500).json({ error: "fetch failed", detail: String(err) });
+      res.status(500).json({ error: "fetch failed" });
+    }
+  });
+
+  // Espelha api/youtube/channel.ts (barato, channels.list = 1u; cache 1h na Vercel)
+  app.get("/api/youtube/channel", async (_req, res) => {
+    const API_KEY = process.env.YOUTUBE_API_KEY;
+    const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
+
+    if (!API_KEY || !CHANNEL_ID) {
+      res.status(500).json({ error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID" });
+      return;
+    }
+
+    try {
+      const r = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${CHANNEL_ID}&key=${API_KEY}`);
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        res.status(200).json({
+          subscribers: 0, totalViews: 0, videoCount: 0, channelTitle: "",
+          error: {
+            status: r.status,
+            reason: body?.error?.errors?.[0]?.reason,
+            message: body?.error?.message,
+          },
+        });
+        return;
+      }
+      const data = await r.json();
+      const stats = data.items?.[0]?.statistics ?? {};
+      const snippet = data.items?.[0]?.snippet ?? {};
+      res.status(200).json({
+        subscribers: parseInt(stats.subscriberCount ?? "0", 10),
+        totalViews: parseInt(stats.viewCount ?? "0", 10),
+        videoCount: parseInt(stats.videoCount ?? "0", 10),
+        channelTitle: snippet.title ?? "",
+      });
+    } catch (err) {
+      console.error("[youtube/channel] exception", err);
+      res.status(500).json({ error: "fetch failed" });
     }
   });
 
