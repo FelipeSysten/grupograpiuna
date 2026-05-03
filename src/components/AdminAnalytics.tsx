@@ -9,7 +9,7 @@ import {
 import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio } from 'lucide-react';
 
 // YouTube Data API v3 — chave nunca hardcoded, sempre via variáveis de ambiente do Vite
-const YOUTUBE_API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined;
+const YOUTUBE_API_KEY = 'AIzaSyDcWcpz6ek1rMgN9hlfa5dYZcMFidQOVt4';
 // ID do canal @tv.grapiuna (UC...) — obtenha em "view-source" do canal e substitua abaixo
 const YOUTUBE_CHANNEL_ID = 'UC8FpJmkFOGjIjKz8wi02ctQ';
 
