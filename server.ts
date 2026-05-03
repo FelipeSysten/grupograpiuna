@@ -25,9 +25,20 @@ async function startServer() {
     const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
 
     if (!API_KEY || !CHANNEL_ID) {
-      res.status(500).json({ error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID" });
+      res.status(500).json({
+        error: "Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID",
+        hasKey: !!API_KEY,
+        hasChannelId: !!CHANNEL_ID,
+      });
       return;
     }
+
+    type ApiError = { source: string; status: number; reason?: string; message?: string };
+    const readErr = async (r: Response, source: string): Promise<ApiError> => {
+      const body = await r.json().catch(() => null);
+      return { source, status: r.status, reason: body?.error?.errors?.[0]?.reason, message: body?.error?.message };
+    };
+    const errors: ApiError[] = [];
 
     try {
       const [searchRes, channelRes] = await Promise.all([
@@ -48,13 +59,11 @@ async function startServer() {
             const concurrent = videoData.items?.[0]?.liveStreamingDetails?.concurrentViewers;
             viewers = concurrent ? parseInt(concurrent, 10) : 0;
           } else {
-            const body = await videoRes.json().catch(() => null);
-            console.error("[youtube/live] videos failed", videoRes.status, body?.error ?? body);
+            errors.push(await readErr(videoRes, "videos"));
           }
         }
       } else {
-        const body = await searchRes.json().catch(() => null);
-        console.error("[youtube/live] search failed", searchRes.status, body?.error ?? body);
+        errors.push(await readErr(searchRes, "search"));
       }
 
       let subscribers = 0;
@@ -72,14 +81,15 @@ async function startServer() {
         }
         if (snippet) channelTitle = snippet.title ?? "";
       } else {
-        const body = await channelRes.json().catch(() => null);
-        console.error("[youtube/live] channels failed", channelRes.status, body?.error ?? body);
+        errors.push(await readErr(channelRes, "channels"));
       }
 
-      res.status(200).json({ viewers, isLive, subscribers, totalViews, videoCount, channelTitle });
+      const payload: any = { viewers, isLive, subscribers, totalViews, videoCount, channelTitle };
+      if (errors.length) payload.errors = errors;
+      res.status(200).json(payload);
     } catch (err) {
       console.error("[youtube/live] exception", err);
-      res.status(500).json({ error: "fetch failed" });
+      res.status(500).json({ error: "fetch failed", detail: String(err) });
     }
   });
 

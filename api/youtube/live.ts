@@ -3,26 +3,40 @@
  * Consulta a YouTube Data API v3 server-side, mantendo a chave fora do bundle.
  * Resposta:
  *   {
- *     viewers: number,        // espectadores simultâneos da live (0 se offline)
- *     isLive: boolean,
- *     subscribers: number,    // inscritos do canal
- *     totalViews: number,     // visualizações totais do canal
- *     videoCount: number,     // total de vídeos publicados
- *     channelTitle: string
+ *     viewers, isLive, subscribers, totalViews, videoCount, channelTitle,
+ *     errors?: Array<{ source, status, reason, message }>
  *   }
  */
+
+type ApiError = { source: string; status: number; reason?: string; message?: string };
+
+async function readGoogleError(res: Response, source: string): Promise<ApiError> {
+  const body = await res.json().catch(() => null);
+  const err = body?.error;
+  return {
+    source,
+    status: res.status,
+    reason: err?.errors?.[0]?.reason,
+    message: err?.message,
+  };
+}
 
 export default async function handler(req: any, res: any) {
   const API_KEY = process.env.YOUTUBE_API_KEY;
   const CHANNEL_ID = process.env.YOUTUBE_CHANNEL_ID;
 
-  // Cache na borda — channel stats mudam devagar; live é re-checada a cada 30s no client
   res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=60');
 
   if (!API_KEY || !CHANNEL_ID) {
-    res.status(500).json({ error: 'Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID' });
+    res.status(500).json({
+      error: 'Missing YOUTUBE_API_KEY or YOUTUBE_CHANNEL_ID',
+      hasKey: !!API_KEY,
+      hasChannelId: !!CHANNEL_ID,
+    });
     return;
   }
+
+  const errors: ApiError[] = [];
 
   try {
     const [searchRes, channelRes] = await Promise.all([
@@ -43,13 +57,11 @@ export default async function handler(req: any, res: any) {
           const concurrent = videoData.items?.[0]?.liveStreamingDetails?.concurrentViewers;
           viewers = concurrent ? parseInt(concurrent, 10) : 0;
         } else {
-          const body = await videoRes.json().catch(() => null);
-          console.error('[youtube/live] videos failed', videoRes.status, body?.error ?? body);
+          errors.push(await readGoogleError(videoRes, 'videos'));
         }
       }
     } else {
-      const body = await searchRes.json().catch(() => null);
-      console.error('[youtube/live] search failed', searchRes.status, body?.error ?? body);
+      errors.push(await readGoogleError(searchRes, 'search'));
     }
 
     let subscribers = 0;
@@ -67,13 +79,14 @@ export default async function handler(req: any, res: any) {
       }
       if (snippet) channelTitle = snippet.title ?? '';
     } else {
-      const body = await channelRes.json().catch(() => null);
-      console.error('[youtube/live] channels failed', channelRes.status, body?.error ?? body);
+      errors.push(await readGoogleError(channelRes, 'channels'));
     }
 
-    res.status(200).json({ viewers, isLive, subscribers, totalViews, videoCount, channelTitle });
+    const payload: any = { viewers, isLive, subscribers, totalViews, videoCount, channelTitle };
+    if (errors.length) payload.errors = errors;
+    res.status(200).json(payload);
   } catch (err) {
     console.error('[youtube/live] exception', err);
-    res.status(500).json({ error: 'fetch failed' });
+    res.status(500).json({ error: 'fetch failed', detail: String(err) });
   }
 }
