@@ -44,9 +44,9 @@ function AccessTracker() {
 
         await setDoc(doc(db, 'site_stats', 'global'), {
           totalAccesses: increment(1),
-          [`pageViews.${pathKey}`]: increment(1),
-          [`dailyStats.${today}`]: increment(1),
-          [`deviceStats.${deviceType}`]: increment(1)
+          pageViews: { [pathKey]: increment(1) },
+          dailyStats: { [today]: increment(1) },
+          deviceStats: { [deviceType]: increment(1) },
         }, { merge: true });
       } catch (error) {
         console.error('Error tracking site access:', error);

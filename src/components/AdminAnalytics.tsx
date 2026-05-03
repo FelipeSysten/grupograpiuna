@@ -6,24 +6,50 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio } from 'lucide-react';
+import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film } from 'lucide-react';
 
-// Audiência ao vivo é resolvida pelo backend em /api/youtube/live.
-// A YouTube API Key e o Channel ID ficam apenas no servidor (process.env), nunca no bundle.
-const fetchLiveViewers = async (): Promise<number> => {
+// Estatísticas do canal YouTube — resolvidas pelo backend em /api/youtube/live.
+// API Key e Channel ID ficam apenas no servidor (process.env), nunca no bundle.
+type YoutubeStats = {
+  viewers: number;
+  isLive: boolean;
+  subscribers: number;
+  totalViews: number;
+  videoCount: number;
+  channelTitle: string;
+};
+const EMPTY_YT_STATS: YoutubeStats = {
+  viewers: 0, isLive: false, subscribers: 0, totalViews: 0, videoCount: 0, channelTitle: '',
+};
+
+const fetchYoutubeStats = async (): Promise<YoutubeStats> => {
   try {
     const res = await fetch('/api/youtube/live');
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       console.error('[youtube/live] backend respondeu não-OK', res.status, body);
-      return 0;
+      return EMPTY_YT_STATS;
     }
     const data = await res.json();
-    return typeof data.viewers === 'number' ? data.viewers : 0;
+    return { ...EMPTY_YT_STATS, ...data };
   } catch (err) {
     console.error('[youtube/live] falha ao consultar backend', err);
-    return 0;
+    return EMPTY_YT_STATS;
   }
+};
+
+// Compat: o tracker antigo gravava chaves dotted ("dailyStats.2026-05-02") como
+// campos literais no topo do documento. Esta função une o mapa aninhado novo
+// com qualquer chave legada do tipo `${prefix}.${sub}` para não perder histórico.
+const mergeNestedAndLegacy = (stats: any, prefix: string): Record<string, number> => {
+  const merged: Record<string, number> = { ...((stats?.[prefix] as Record<string, number>) ?? {}) };
+  for (const [k, v] of Object.entries(stats ?? {})) {
+    if (k.startsWith(`${prefix}.`) && typeof v === 'number') {
+      const subKey = k.slice(prefix.length + 1);
+      if (!(subKey in merged)) merged[subKey] = v;
+    }
+  }
+  return merged;
 };
 
 const PATH_LABELS: Record<string, string> = {
@@ -68,7 +94,7 @@ const StatCard = ({ title, value, icon: Icon, color }: {
   </div>
 );
 
-const LiveStatCard = ({ viewers }: { viewers: number }) => (
+const LiveStatCard = ({ viewers, isLive }: { viewers: number; isLive: boolean }) => (
   <div className="bg-white p-6 rounded-3xl border border-red-100 shadow-sm ring-1 ring-red-50 relative overflow-hidden">
     <div className="absolute -top-10 -right-10 w-32 h-32 bg-red-50 rounded-full opacity-60 pointer-events-none" />
     <div className="relative">
@@ -76,9 +102,11 @@ const LiveStatCard = ({ viewers }: { viewers: number }) => (
         <div className="p-3 rounded-2xl bg-red-600 text-white">
           <Radio size={20} />
         </div>
-        <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase tracking-widest bg-red-50 px-2 py-1 rounded-full">
-          <span className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
-          Ao Vivo
+        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${
+          isLive ? 'text-red-600 bg-red-50' : 'text-gray-400 bg-gray-100'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-red-600 animate-pulse' : 'bg-gray-400'}`} />
+          {isLive ? 'Ao Vivo' : 'Offline'}
         </span>
       </div>
       <h3 className="text-gray-500 text-sm font-medium mb-1">Audiência YouTube</h3>
@@ -93,7 +121,7 @@ export const AdminAnalytics = () => {
   const [stats, setStats] = useState<any>(null);
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [liveViewers, setLiveViewers] = useState<number>(0);
+  const [yt, setYt] = useState<YoutubeStats>(EMPTY_YT_STATS);
 
   useEffect(() => {
     const unsubStats = onSnapshot(doc(db, 'site_stats', 'global'), (snap) => {
@@ -112,8 +140,8 @@ export const AdminAnalytics = () => {
   useEffect(() => {
     let alive = true;
     const update = async () => {
-      const n = await fetchLiveViewers();
-      if (alive) setLiveViewers(n);
+      const data = await fetchYoutubeStats();
+      if (alive) setYt(data);
     };
     update();
     const id = setInterval(update, 30_000);
@@ -123,27 +151,26 @@ export const AdminAnalytics = () => {
   if (loading) return <div className="animate-pulse h-96 bg-gray-100 rounded-3xl" />;
 
   // ── Daily Accesses — sort by YYYY-MM-DD first, then format to DD/MM ────────
-  const dailyData = stats?.dailyStats
-    ? Object.entries(stats.dailyStats as Record<string, number>)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-14)
-      .map(([date, count]) => {
-        const [, mm, dd] = date.split('-');
-        return { date: `${dd}/${mm}`, count };
-      })
-    : [];
+  const dailyMap = mergeNestedAndLegacy(stats, 'dailyStats');
+  const dailyData = Object.entries(dailyMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-14)
+    .map(([date, count]) => {
+      const [, mm, dd] = date.split('-');
+      return { date: `${dd}/${mm}`, count };
+    });
 
   // ── Top Pages ─────────────────────────────────────────────────────────────
-  const pageData = stats?.pageViews
-    ? Object.entries(stats.pageViews as Record<string, number>)
-      .map(([key, count]) => ({ name: pathLabel(key), count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 7)
-    : [];
+  const pageMap = mergeNestedAndLegacy(stats, 'pageViews');
+  const pageData = Object.entries(pageMap)
+    .map(([key, count]) => ({ name: pathLabel(key), count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7);
 
   // ── Device Distribution ───────────────────────────────────────────────────
-  const desktop = stats?.deviceStats?.desktop ?? 0;
-  const mobile = stats?.deviceStats?.mobile ?? 0;
+  const deviceMap = mergeNestedAndLegacy(stats, 'deviceStats');
+  const desktop = deviceMap.desktop ?? 0;
+  const mobile = deviceMap.mobile ?? 0;
   const hasDeviceData = desktop + mobile > 0;
   const deviceData = [
     { name: 'Desktop', value: desktop, color: '#2563eb' },
@@ -170,13 +197,32 @@ export const AdminAnalytics = () => {
         </div>
       </div>
 
-      {/* ── Summary Cards ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <LiveStatCard viewers={liveViewers} />
-        <StatCard title="Acessos Totais" value={stats?.totalAccesses} icon={Eye} color="bg-blue-600" />
-        <StatCard title="Views de Vídeos" value={totalVideoViews} icon={TrendingUp} color="bg-red-600" />
-        <StatCard title="Acessos Mobile" value={stats?.deviceStats?.mobile} icon={Smartphone} color="bg-orange-600" />
-        <StatCard title="Acessos Desktop" value={stats?.deviceStats?.desktop} icon={Monitor} color="bg-indigo-600" />
+      {/* ── Canal YouTube ───────────────────────────────────────────────── */}
+      <div>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3 flex items-center gap-2">
+          <Youtube size={14} className="text-red-600" />
+          Canal {yt.channelTitle ? `· ${yt.channelTitle}` : 'YouTube'}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <LiveStatCard viewers={yt.viewers} isLive={yt.isLive} />
+          <StatCard title="Inscritos do Canal"      value={yt.subscribers} icon={Users} color="bg-red-600" />
+          <StatCard title="Visualizações Totais"    value={yt.totalViews}  icon={Eye}   color="bg-red-500" />
+          <StatCard title="Vídeos Publicados"       value={yt.videoCount}  icon={Film}  color="bg-red-700" />
+        </div>
+      </div>
+
+      {/* ── Audiência do Site ───────────────────────────────────────────── */}
+      <div>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3 flex items-center gap-2">
+          <BarChart2 size={14} className="text-blue-600" />
+          Audiência do Portal
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard title="Acessos Totais"     value={stats?.totalAccesses} icon={Eye}        color="bg-blue-600"   />
+          <StatCard title="Views no Portal"    value={totalVideoViews}      icon={TrendingUp} color="bg-pink-600"   />
+          <StatCard title="Acessos Mobile"     value={mobile}               icon={Smartphone} color="bg-orange-600" />
+          <StatCard title="Acessos Desktop"    value={desktop}              icon={Monitor}    color="bg-indigo-600" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
