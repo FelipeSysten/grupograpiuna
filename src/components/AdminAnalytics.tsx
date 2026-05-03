@@ -8,28 +8,20 @@ import {
 } from 'recharts';
 import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio } from 'lucide-react';
 
-// YouTube Data API v3 — chave nunca hardcoded, sempre via variáveis de ambiente do Vite
-const YOUTUBE_API_KEY = 'AIzaSyDcWcpz6ek1rMgN9hlfa5dYZcMFidQOVt4';
-// ID do canal @tv.grapiuna (UC...) — obtenha em "view-source" do canal e substitua abaixo
-const YOUTUBE_CHANNEL_ID = 'UC8FpJmkFOGjIjKz8wi02ctQ';
-
+// Audiência ao vivo é resolvida pelo backend em /api/youtube/live.
+// A YouTube API Key e o Channel ID ficam apenas no servidor (process.env), nunca no bundle.
 const fetchLiveViewers = async (): Promise<number> => {
-  if (!YOUTUBE_API_KEY || YOUTUBE_CHANNEL_ID.startsWith('UC_TV_GRAPIUNA')) return 0;
   try {
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${YOUTUBE_CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
-    const searchRes = await fetch(searchUrl);
-    if (!searchRes.ok) return 0;
-    const searchData = await searchRes.json();
-    const liveVideoId: string | undefined = searchData.items?.[0]?.id?.videoId;
-    if (!liveVideoId) return 0;
-
-    const videoUrl = `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${liveVideoId}&key=${YOUTUBE_API_KEY}`;
-    const videoRes = await fetch(videoUrl);
-    if (!videoRes.ok) return 0;
-    const videoData = await videoRes.json();
-    const concurrent = videoData.items?.[0]?.liveStreamingDetails?.concurrentViewers;
-    return concurrent ? parseInt(concurrent, 10) : 0;
-  } catch {
+    const res = await fetch('/api/youtube/live');
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      console.error('[youtube/live] backend respondeu não-OK', res.status, body);
+      return 0;
+    }
+    const data = await res.json();
+    return typeof data.viewers === 'number' ? data.viewers : 0;
+  } catch (err) {
+    console.error('[youtube/live] falha ao consultar backend', err);
     return 0;
   }
 };
