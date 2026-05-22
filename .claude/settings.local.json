@@ -6,7 +6,8 @@
       "Bash(npm install *)",
       "Bash(npm list *)",
       "Bash(npx tsc *)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Read(//c/Users/Felipe/Documents/DEV/Obsidian/GrupoGrapiuna/GrupoGrapiuna/GrupoGrapiunaDoc/**)"
     ]
   }
 }

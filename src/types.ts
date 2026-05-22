@@ -8,6 +8,7 @@ export interface NewsPost {
   id?: string;
   title: string;
   content: string;
+  updateNote?: string;
   category: string;
   author: string;
   imageUrl: string;

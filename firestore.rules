@@ -77,7 +77,7 @@ service cloud.firestore {
     function isValidComment(data) {
       return data.keys().hasAll(['text', 'userId', 'userName', 'createdAt']) &&
              data.text is string && data.text.size() > 0 && data.text.size() < 500 &&
-             data.userId == request.auth.uid &&
+             data.userId is string &&
              data.userName is string && data.userName.size() > 0 && data.userName.size() < 100 &&
              data.createdAt == request.time;
     }
@@ -106,8 +106,8 @@ service cloud.firestore {
 
     match /news/{newsId}/comments/{commentId} {
       allow read: if true;
-      allow create: if isAuthenticated() && isValidComment(request.resource.data);
-      allow delete: if isAdmin() || isOwner(resource.data.userId);
+      allow create: if isValidComment(request.resource.data);
+      allow delete: if isAdmin() || (isAuthenticated() && isOwner(resource.data.userId));
     }
 
     match /tv_schedule/{scheduleId=**} {

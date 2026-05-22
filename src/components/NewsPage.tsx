@@ -61,9 +61,9 @@ export const NewsPage = () => {
           <AdBanner size="leaderboard" />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-12">
+          <div className="lg:col-span-3 space-y-8">
             {/* Featured Post */}
             {featuredNews && (
               <Link to={`/noticias/${featuredNews.id}`} className="relative group cursor-pointer block overflow-hidden rounded-2xl">
@@ -90,33 +90,33 @@ export const NewsPage = () => {
             )}
 
             {/* News Feed */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {feedNews.map((item) => (
-                <Link 
+                <Link
                   to={`/noticias/${item.id}`}
                   key={item.id}
-                  className="flex flex-col gap-4 group"
+                  className="flex flex-col gap-3 group"
                 >
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="flex flex-col gap-4"
+                    className="flex flex-col gap-3"
                   >
                     <div className="aspect-video overflow-hidden rounded-xl">
-                      <img 
-                        src={item.imageUrl} 
-                        alt={item.title} 
+                      <img
+                        src={item.imageUrl}
+                        alt={item.title}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         referrerPolicy="no-referrer"
                       />
                     </div>
                     <div>
-                      <span className="text-red-600 text-[10px] font-bold uppercase tracking-widest mb-2 block">{item.category}</span>
-                      <h3 className="text-xl font-bold leading-tight group-hover:text-red-600 transition-colors mb-3">
+                      <span className="text-red-600 text-[10px] font-bold uppercase tracking-widest mb-1.5 block">{item.category}</span>
+                      <h3 className="text-lg font-bold leading-snug group-hover:text-red-600 transition-colors mb-2">
                         {item.title}
                       </h3>
-                      <p className="text-gray-500 text-sm line-clamp-2 mb-4">
+                      <p className="text-gray-500 text-sm line-clamp-2 mb-3">
                         {item.content}
                       </p>
                       <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -131,7 +131,7 @@ export const NewsPage = () => {
           </div>
 
           {/* Sidebar */}
-          <aside className="space-y-12">
+          <aside className="space-y-8">
             {/* Search */}
             <div className="relative">
               <input 

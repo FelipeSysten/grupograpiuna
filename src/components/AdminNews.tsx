@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Plus, Trash2, Edit2, X, Image, Youtube, Link as LinkIcon } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Image, Youtube, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { ImageUploadField } from './ImageUploadField';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { NewsMediaItem } from '../types';
@@ -13,6 +13,7 @@ export const AdminNews = () => {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
+    updateNote: '',
     category: 'Cidade',
     author: '',
     imageUrl: '',
@@ -68,7 +69,7 @@ export const AdminNews = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ title: '', content: '', category: 'Cidade', author: '', imageUrl: '', featured: false, media: [] });
+    setFormData({ title: '', content: '', updateNote: '', category: 'Cidade', author: '', imageUrl: '', featured: false, media: [] });
     setPendingImage('');
     setPendingVideo('');
     setPendingLinkUrl('');
@@ -80,6 +81,7 @@ export const AdminNews = () => {
     setFormData({
       title: item.title,
       content: item.content,
+      updateNote: item.updateNote || '',
       category: item.category,
       author: item.author,
       imageUrl: item.imageUrl,
@@ -194,13 +196,26 @@ export const AdminNews = () => {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold uppercase text-gray-400 mb-2">Conteúdo (Markdown)</label>
-                  <textarea 
+                  <textarea
                     required
                     rows={6}
                     value={formData.content}
                     onChange={(e) => setFormData({...formData, content: e.target.value})}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-600"
                   ></textarea>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold uppercase text-amber-500 mb-2 flex items-center gap-1.5">
+                    <RefreshCw size={12} /> Atualização da Reportagem
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.updateNote}
+                    onChange={(e) => setFormData({...formData, updateNote: e.target.value})}
+                    placeholder="Acrescente uma atualização ou correção nesta matéria..."
+                    className="w-full border border-amber-200 bg-amber-50/30 rounded-xl px-4 py-3 focus:outline-none focus:border-amber-400 text-sm"
+                  ></textarea>
+                  <p className="text-[10px] text-gray-400 mt-1">Se preenchido, será exibido em destaque no topo da matéria.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
