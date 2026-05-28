@@ -7,9 +7,12 @@ interface AdBannerProps {
   size: 'leaderboard' | 'sidebar' | 'mobile' | 'intermediario' | 'cover';
   page?: string;
   className?: string;
+  /** Posição do anúncio na lista (0 = primeiro, 1 = segundo…). Evita duplicatas quando
+   *  dois AdBanners do mesmo tamanho/página são renderizados juntos. Sem este prop, sorteia. */
+  index?: number;
 }
 
-export const AdBanner = ({ size, page, className }: AdBannerProps) => {
+export const AdBanner = ({ size, page, className, index }: AdBannerProps) => {
   const [ad, setAd] = useState<any>(null);
 
   useEffect(() => {
@@ -25,16 +28,17 @@ export const AdBanner = ({ size, page, className }: AdBannerProps) => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
-        // Pega um anúncio aleatório dos ativos para a página
-        const randomIndex = Math.floor(Math.random() * snapshot.docs.length);
-        setAd(snapshot.docs[randomIndex].data());
+        const i = typeof index === 'number'
+          ? index % snapshot.docs.length
+          : Math.floor(Math.random() * snapshot.docs.length);
+        setAd(snapshot.docs[i].data());
       } else {
         setAd(null);
       }
     });
 
     return () => unsubscribe();
-  }, [size, page]);
+  }, [size, page, index]);
 
   const sizeClasses = {
     leaderboard:  'w-full max-w-[970px] h-[90px]',

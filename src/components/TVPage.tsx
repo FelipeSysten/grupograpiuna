@@ -335,8 +335,8 @@ export const TVPage = () => {
 
               {/* Ad banners */}
               <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" />
-                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" index={0} />
+                <AdBanner size="sidebar" page="tv" className="w-full h-auto aspect-[2/1]" index={1} />
               </div>
             </div>
 
