@@ -10,6 +10,20 @@ import { db, auth, loginWithGoogle } from '../firebase';
 import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
+const DAYS_FULL = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+  'Domingo',
+];
+const DAYS_SHORT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+const getDayName = (d: Date) => DAYS_FULL[d.getDay() === 0 ? 6 : d.getDay() - 1];
+const TODAY_NAME = getDayName(new Date());
+
 const FALLBACK_CHANNELS: TVChannel[] = [
   { name: 'CARNAVAL DE ITABUNA | 1º DIA', url: 'https://www.youtube.com/watch?v=soLycr6nPKU&t=21387s' },
   { name: 'CARNAVAL DE ITABUNA | 2º DIA', url: 'https://www.youtube.com/watch?v=E0lAxzXTAjc&t=3s' },
@@ -29,6 +43,7 @@ export const TVPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
   const [activeChannelName, setActiveChannelName] = useState<string | null>(null);
   const [selectedVideoStart, setSelectedVideoStart] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>(TODAY_NAME);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -88,8 +103,10 @@ export const TVPage = () => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleItem));
       setSchedule(data);
       const now = new Date();
+      const todayName = getDayName(now);
       const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const current = [...data].reverse().find(p => p.time <= currentTime) || data[0];
+      const todayItems = data.filter(p => p.dayOfWeek === todayName);
+      const current = [...todayItems].reverse().find(p => p.time <= currentTime) || todayItems[0];
       if (current) {
         setCurrentProgram(current);
         if (current.youtubeUrl && !liveConfig?.active) {
@@ -482,47 +499,106 @@ export const TVPage = () => {
       {/* ── 4. Grade de Programação ────────────────────────────────────────── */}
       <section className="py-16 bg-gray-900/50 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4 mb-10">
-            <Calendar size={26} className="text-red-600" />
-            <h2 className="text-3xl font-black uppercase tracking-tighter">
-              Grade de <span className="text-red-600">Programação</span>
-            </h2>
+          {/* Cabeçalho */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <Calendar size={26} className="text-red-600" />
+              <h2 className="text-3xl font-black uppercase tracking-tighter">
+                Grade de <span className="text-red-600">Programação</span>
+              </h2>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {schedule.length > 0 ? schedule.map((prog, i) => (
-              <button
-                key={i}
-                onClick={() => handleProgramClick(prog)}
-                className={`text-left p-4 rounded-lg border-l-4 transition-all hover:scale-105 text-sm ${
-                  currentProgram?.id === prog.id && !selectedChannel
-                    ? 'bg-red-600/10 border-red-600 shadow-lg shadow-red-900/20'
-                    : 'bg-gray-800 border-gray-700 hover:bg-gray-750'
-                }`}
-              >
-                <span className={`font-mono font-bold text-base ${
-                  currentProgram?.id === prog.id && !selectedChannel ? 'text-red-400' : 'text-red-500'
-                }`}>
-                  {prog.time}
-                </span>
-                <h3 className="text-base font-bold mt-2 line-clamp-2">{prog.title}</h3>
-                <p className="text-gray-400 text-xs mt-1 line-clamp-1">Com {prog.host}</p>
-                {prog.youtubeUrl && (
-                  <div className="mt-2 flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
-                    <Play size={10} fill="currentColor" /> Assistir
-                  </div>
-                )}
-              </button>
-            )) : (
-              [1, 2, 3, 4, 5, 6].map((n) => (
+          {/* Tabs de dias */}
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-1 scrollbar-hide">
+            {DAYS_FULL.map((day, i) => {
+              const isToday = day === TODAY_NAME;
+              const isSelected = day === selectedDay;
+              const count = schedule.filter(p => p.dayOfWeek === day).length;
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-all ${
+                    isSelected
+                      ? 'bg-red-600 text-white shadow-lg shadow-red-900/30'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700'
+                  }`}
+                >
+                  {isToday && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />}
+                  {DAYS_SHORT[i]}
+                  {count > 0 && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                      isSelected ? 'bg-white/20' : 'bg-gray-700 text-gray-400'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Programas do dia selecionado */}
+          {schedule.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((n) => (
                 <div key={n} className="bg-gray-800 p-4 rounded-lg border-l-4 border-gray-700 animate-pulse">
                   <div className="h-4 bg-gray-700 rounded w-1/3 mb-2" />
                   <div className="h-4 bg-gray-700 rounded w-full mb-2" />
                   <div className="h-3 bg-gray-700 rounded w-2/3" />
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (() => {
+            const dayItems = schedule.filter(p => p.dayOfWeek === selectedDay);
+            if (dayItems.length === 0) {
+              return (
+                <div className="text-center py-16 text-gray-600">
+                  <Calendar size={36} className="mx-auto mb-3 opacity-20" />
+                  <p className="text-sm font-bold">Nenhum programa cadastrado para {selectedDay}.</p>
+                </div>
+              );
+            }
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {dayItems.map((prog) => (
+                  <button
+                    key={prog.id}
+                    onClick={() => handleProgramClick(prog)}
+                    className={`text-left p-4 rounded-xl border-l-4 transition-all hover:scale-[1.02] text-sm ${
+                      currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME
+                        ? 'bg-red-600/10 border-red-600 shadow-lg shadow-red-900/20'
+                        : 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`font-mono font-bold text-sm ${
+                        currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME
+                          ? 'text-red-400'
+                          : 'text-red-500'
+                      }`}>
+                        {prog.time}
+                      </span>
+                      {currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME && (
+                        <span className="flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase tracking-widest">
+                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                          Agora
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-sm font-bold leading-snug line-clamp-2 mb-1">{prog.title}</h3>
+                    <p className="text-gray-400 text-xs line-clamp-1 mb-2">Com {prog.host}</p>
+                    {prog.youtubeUrl && (
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                        <Play size={10} fill="currentColor" /> Assistir
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </section>
     </div>
