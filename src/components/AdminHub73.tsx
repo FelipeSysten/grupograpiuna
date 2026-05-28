@@ -11,9 +11,21 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Plus, Trash2, Edit2, X, Video } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Video, Wand2 } from 'lucide-react';
 import { ImageUploadField } from './ImageUploadField';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+
+const getYouTubeId = (url: string): string | null => {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+  );
+  return match ? match[1] : null;
+};
+
+const getYouTubeThumbnail = (url: string): string | null => {
+  const id = getYouTubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+};
 
 interface HubVideo {
   id: string;
@@ -122,6 +134,22 @@ export const AdminHub73 = () => {
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setFormData({ ...formData, [key]: e.target.value }),
   });
+
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    const ytThumb = getYouTubeThumbnail(url);
+    setFormData(prev => ({
+      ...prev,
+      videoUrl: url,
+      // Preenche a capa automaticamente se: ainda está vazia OU já era um thumbnail do YouTube
+      imageUrl:
+        ytThumb && (!prev.imageUrl || prev.imageUrl.includes('img.youtube.com'))
+          ? ytThumb
+          : prev.imageUrl,
+    }));
+  };
+
+  const isAutoThumb = !!formData.imageUrl && formData.imageUrl.includes('img.youtube.com');
 
   /* ── Render ────────────────────────────────────────────────────── */
   return (
@@ -292,16 +320,45 @@ export const AdminHub73 = () => {
                   <input
                     required
                     type="url"
-                    {...field('videoUrl')}
+                    value={formData.videoUrl}
+                    onChange={handleVideoUrlChange}
                     placeholder="https://youtube.com/watch?v=... ou https://.../stream.m3u8"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-red-600 text-gray-900 font-mono text-sm"
                   />
+                  {getYouTubeId(formData.videoUrl) && (
+                    <p className="mt-1.5 text-[11px] text-green-600 font-bold flex items-center gap-1">
+                      <Wand2 size={11} /> Capa detectada automaticamente do YouTube
+                    </p>
+                  )}
                 </div>
 
                 {/* Thumbnail */}
                 <div className="md:col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-xs font-bold uppercase text-gray-400">
+                      Thumbnail (Miniatura)
+                    </label>
+                    {isAutoThumb && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                        <Wand2 size={10} /> Auto (YouTube)
+                      </span>
+                    )}
+                  </div>
+                  {isAutoThumb && formData.imageUrl && (
+                    <div className="mb-3 flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Capa automática"
+                        className="w-24 h-14 object-cover rounded-lg border border-green-200"
+                      />
+                      <div className="text-xs text-green-700">
+                        <p className="font-bold">Capa extraída do YouTube</p>
+                        <p className="text-green-600 mt-0.5">Faça upload abaixo para usar uma imagem personalizada.</p>
+                      </div>
+                    </div>
+                  )}
                   <ImageUploadField
-                    label="Thumbnail (Miniatura)"
+                    label=""
                     value={formData.imageUrl}
                     onChange={(url) => setFormData({ ...formData, imageUrl: url })}
                     folder="hub73"
