@@ -11,15 +11,10 @@ import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 
 const FALLBACK_CHANNELS: TVChannel[] = [
-  { name: 'BAND BAHIA',                      url: 'https://hplay.tv:443/jaypereiratvweb/112254789/175.m3u8' },
-  { name: 'GLOBO BA',                        url: 'https://hplay.tv:443/jaypereiratvweb/112254789/172.m3u8' },
-  { name: 'GLOBO BA | JUAZEIRO',             url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7299.m3u8' },
-  { name: 'GLOBO BA | SUBAÉ',                url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7298.m3u8' },
-  { name: 'GLOBO BA | TV SANTA CRUZ',        url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7411.m3u8' },
-  { name: 'GLOBO BA | TV SUDOESTE',          url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7426.m3u8' },
-  { name: 'GLOBO BA | VITÓRIA DA CONQUISTA', url: 'https://hplay.tv:443/jaypereiratvweb/112254789/136460.m3u8' },
-  { name: 'RECORD BAHIA',                    url: 'https://hplay.tv:443/jaypereiratvweb/112254789/174.m3u8' },
-  { name: 'RECORD CABRÁLIA',                 url: 'https://hplay.tv:443/jaypereiratvweb/112254789/7189.m3u8' },
+  { name: 'CARNAVAL DE ITABUNA | 1º DIA', url: 'https://www.youtube.com/watch?v=soLycr6nPKU&t=21387s' },
+  { name: 'CARNAVAL DE ITABUNA | 2º DIA', url: 'https://www.youtube.com/watch?v=E0lAxzXTAjc&t=3s' },
+  { name: 'CARNAVAL DE ITABUNA | 3º DIA', url: 'https://www.youtube.com/watch?v=GxBJAxQYqhI&t=67s' },
+  { name: 'CARNAVAL DE ITABUNA | 4º DIA', url: 'https://www.youtube.com/watch?v=o6t97ZblHis&t=201s' },
 ];
 
 type ViewMode = 'normal' | 'theater';
@@ -32,6 +27,8 @@ export const TVPage = () => {
   const [selectedChannel, setSelectedChannel] = useState<TVChannel | null>(null);
   const [channels, setChannels] = useState<TVChannel[]>(FALLBACK_CHANNELS);
   const [viewMode, setViewMode] = useState<ViewMode>('normal');
+  const [activeChannelName, setActiveChannelName] = useState<string | null>(null);
+  const [selectedVideoStart, setSelectedVideoStart] = useState<number | null>(null);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -135,13 +132,27 @@ export const TVPage = () => {
     return match && match[2].length === 11 ? match[2] : null;
   };
 
+  const getYouTubeStart = (url: string): number | null => {
+    const match = url.match(/[?&]t=(\d+)s?/);
+    return match ? parseInt(match[1]) : null;
+  };
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  /** Seleciona um canal HLS; descarta YouTube da grade */
+  /** Seleciona um canal; detecta YouTube vs HLS automaticamente */
   const handleChannelSelect = (channel: TVChannel) => {
-    setSelectedVideoId(null);
-    setSelectedChannel(channel);
-    // O carregamento HLS ocorre no useEffect acima, após o re-render
+    const ytId = getYouTubeId(channel.url);
+    if (ytId) {
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      setSelectedChannel(null);
+      setSelectedVideoId(ytId);
+      setSelectedVideoStart(getYouTubeStart(channel.url));
+    } else {
+      setSelectedVideoId(null);
+      setSelectedVideoStart(null);
+      setSelectedChannel(channel);
+    }
+    setActiveChannelName(channel.name);
   };
 
   /** Clique na grade de programação: carrega YouTube e encerra HLS */
@@ -150,6 +161,8 @@ export const TVPage = () => {
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     setSelectedChannel(null);
     setSelectedVideoId(getYouTubeId(prog.youtubeUrl));
+    setSelectedVideoStart(null);
+    setActiveChannelName(null);
     setCurrentProgram(prog);
   };
 
@@ -224,11 +237,11 @@ export const TVPage = () => {
                   src={liveConfig?.active && liveConfig?.type === 'direct' && !selectedChannel ? liveConfig.url : undefined}
                 />
 
-                {/* YouTube iframe */}
+                {/* YouTube iframe — selectedVideoId tem prioridade sobre liveConfig */}
                 {showIframe && (
                   <iframe
                     className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${liveConfig?.active ? getYouTubeId(liveConfig.url) : selectedVideoId}?autoplay=1`}
+                    src={`https://www.youtube.com/embed/${selectedVideoId ?? (liveConfig?.active ? getYouTubeId(liveConfig.url) : null)}?autoplay=1${selectedVideoStart ? `&start=${selectedVideoStart}` : ''}`}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -256,14 +269,10 @@ export const TVPage = () => {
                 )}
 
                 {/* Badge AO VIVO */}
-                {(currentProgram || liveConfig?.active || selectedChannel) && (
+                {(currentProgram || liveConfig?.active || selectedChannel || activeChannelName) && (
                   <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full text-xs font-bold z-10">
                     <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                    {liveConfig?.active
-                      ? 'TRANSMISSÃO AO VIVO'
-                      : selectedChannel
-                        ? selectedChannel.name
-                        : currentProgram?.title}
+                    {selectedChannel?.name ?? activeChannelName ?? (liveConfig?.active ? 'TRANSMISSÃO AO VIVO' : currentProgram?.title)}
                   </div>
                 )}
               </div>
@@ -272,7 +281,7 @@ export const TVPage = () => {
               <div className="mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                   <h1 className="text-xl font-bold">
-                    {selectedChannel?.name ?? (liveConfig?.active ? 'TV Grapiúna Ao Vivo' : (currentProgram?.title || 'Eventos ao Vivo'))}
+                    {selectedChannel?.name ?? activeChannelName ?? (liveConfig?.active ? 'TV Grapiúna Ao Vivo' : (currentProgram?.title || 'Eventos ao Vivo'))}
                   </h1>
                   <p className="text-gray-400 text-sm">
                     {currentProgram?.host && !selectedChannel
@@ -434,7 +443,7 @@ export const TVPage = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {channels.map((ch) => {
-              const isActive = selectedChannel?.url === ch.url;
+              const isActive = selectedChannel?.url === ch.url || (!selectedChannel && activeChannelName === ch.name);
               return (
                 <motion.button
                   key={ch.url}
