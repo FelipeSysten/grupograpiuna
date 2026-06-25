@@ -22,6 +22,16 @@ function getStringValue(field: any): string {
   return field?.stringValue ?? '';
 }
 
+/**
+ * O parâmetro `id` pode chegar como `slug-docId` (URL legível) ou só o docId
+ * (links antigos). Como os IDs automáticos do Firestore não contêm hífen, o
+ * docId é sempre o último segmento após o último hífen.
+ */
+function extractDocId(param: string): string {
+  const idx = param.lastIndexOf('-');
+  return idx === -1 ? param : param.slice(idx + 1);
+}
+
 export default async function handler(req: any, res: any) {
   const id = String(req.query?.id ?? '').trim();
 
@@ -34,10 +44,12 @@ export default async function handler(req: any, res: any) {
   const host = req.headers['x-forwarded-host'] || req.headers['host'] || 'grupograpiuna.com.br';
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const SITE_URL = `${protocol}://${host}`;
+  // `id` mantém o slug legível para a URL canônica; `docId` é o ID real no Firestore.
   const canonicalUrl = `${SITE_URL}/noticias/${encodeURIComponent(id)}`;
+  const docId = extractDocId(id);
 
   const firestoreUrl =
-    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/news/${id}?key=${FIREBASE_API_KEY}`;
+    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents/news/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}`;
 
   try {
     const response = await fetch(firestoreUrl);
