@@ -8,12 +8,16 @@ import { Clock, User, ArrowLeft, Share2, Facebook, Twitter, MessageCircle, Exter
 import Markdown from 'react-markdown';
 import { AdBanner } from './AdBanner';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { newsHref, extractNewsId } from '../lib/utils';
 import { NewsComment } from '../types';
 
 export const NewsDetailPage = () => {
   const { id } = useParams<{ id: string }>();
+  // A rota pode vir como `slug-id` (URL legível) ou só o id (links antigos).
+  const newsId = extractNewsId(id);
   const [news, setNews] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
   const [comments, setComments] = useState<NewsComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [guestName, setGuestName] = useState('');
@@ -23,9 +27,9 @@ export const NewsDetailPage = () => {
 
   useEffect(() => {
     const fetchNews = async () => {
-      if (!id) return;
+      if (!newsId) return;
       try {
-        const docRef = doc(db, 'news', id);
+        const docRef = doc(db, 'news', newsId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setNews({ id: docSnap.id, ...docSnap.data() });
@@ -39,7 +43,7 @@ export const NewsDetailPage = () => {
 
     fetchNews();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [newsId]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUser(u));
@@ -47,23 +51,23 @@ export const NewsDetailPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
-    const q = query(collection(db, 'news', id, 'comments'), orderBy('createdAt', 'asc'));
+    if (!newsId) return;
+    const q = query(collection(db, 'news', newsId, 'comments'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(
       q,
       (snap) => setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() } as NewsComment))),
       (err) => handleFirestoreError(err, OperationType.LIST, 'comments'),
     );
     return () => unsub();
-  }, [id]);
+  }, [newsId]);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || !id) return;
+    if (!newComment.trim() || !newsId) return;
     if (!user && !guestName.trim()) return;
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'news', id, 'comments'), {
+      await addDoc(collection(db, 'news', newsId, 'comments'), {
         text: newComment.trim(),
         userId: user?.uid || '',
         userName: user?.displayName || guestName.trim(),
@@ -80,9 +84,9 @@ export const NewsDetailPage = () => {
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!id) return;
+    if (!newsId) return;
     try {
-      await deleteDoc(doc(db, 'news', id, 'comments', commentId));
+      await deleteDoc(doc(db, 'news', newsId, 'comments', commentId));
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, 'comments');
     }
@@ -110,6 +114,40 @@ export const NewsDetailPage = () => {
   const getYouTubeId = (url: string): string | null => {
     const match = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]{11})/);
     return match ? match[1] : null;
+  };
+
+  // URL canônica e legível da notícia para compartilhamento
+  const shareUrl = `${window.location.origin}${newsHref(news.title, newsId)}`;
+  const encodedUrl = encodeURIComponent(shareUrl);
+  const encodedTitle = encodeURIComponent(news.title);
+
+  const openShareWindow = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareFacebook = () =>
+    openShareWindow(`https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`);
+  const handleShareTwitter = () =>
+    openShareWindow(`https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`);
+  const handleShareWhatsApp = () =>
+    openShareWindow(`https://wa.me/?text=${encodedTitle}%20${encodedUrl}`);
+
+  const handleNativeShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: news.title, text: news.title, url: shareUrl });
+      } catch {
+        /* usuário cancelou o compartilhamento */
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        window.prompt('Copie o link da notícia:', shareUrl);
+      }
+    }
   };
 
   return (
@@ -157,18 +195,49 @@ export const NewsDetailPage = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleShareFacebook}
+                    aria-label="Compartilhar no Facebook"
+                    title="Compartilhar no Facebook"
+                    className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors"
+                  >
                     <Facebook size={18} />
                   </button>
-                  <button className="w-10 h-10 rounded-full bg-sky-400 text-white flex items-center justify-center hover:bg-sky-500 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleShareTwitter}
+                    aria-label="Compartilhar no X (Twitter)"
+                    title="Compartilhar no X (Twitter)"
+                    className="w-10 h-10 rounded-full bg-sky-400 text-white flex items-center justify-center hover:bg-sky-500 transition-colors"
+                  >
                     <Twitter size={18} />
                   </button>
-                  <button className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors">
+                  <button
+                    type="button"
+                    onClick={handleShareWhatsApp}
+                    aria-label="Compartilhar no WhatsApp"
+                    title="Compartilhar no WhatsApp"
+                    className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors"
+                  >
                     <MessageCircle size={18} />
                   </button>
-                  <button className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors">
-                    <Share2 size={18} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={handleNativeShare}
+                      aria-label="Compartilhar ou copiar link"
+                      title="Compartilhar ou copiar link"
+                      className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                    {copied && (
+                      <span className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black text-white text-[10px] font-bold px-2 py-1 rounded">
+                        Link copiado!
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </header>

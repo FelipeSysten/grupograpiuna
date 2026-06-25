@@ -6,6 +6,7 @@ import { AdBanner } from './AdBanner';
 import { StoriesStrip } from './StoriesStrip';
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db } from '../firebase';
+import { newsHref } from '../lib/utils';
 
 export const NewsPage = () => {
   const categories = ['Todas', 'Política', 'Cidade', 'Economia', 'Polícia', 'Esporte', 'Sul da Bahia', 'Brasil', 'Opinião'];
@@ -66,7 +67,7 @@ export const NewsPage = () => {
           <div className="lg:col-span-3 space-y-8">
             {/* Featured Post */}
             {featuredNews && (
-              <Link to={`/noticias/${featuredNews.id}`} className="relative group cursor-pointer block overflow-hidden rounded-2xl">
+              <Link to={newsHref(featuredNews.title, featuredNews.id)} className="relative group cursor-pointer block overflow-hidden rounded-2xl">
                 <div className="aspect-[21/9]">
                   <img 
                     src={featuredNews.imageUrl} 
@@ -93,7 +94,7 @@ export const NewsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {feedNews.map((item) => (
                 <Link
-                  to={`/noticias/${item.id}`}
+                  to={newsHref(item.title, item.id)}
                   key={item.id}
                   className="flex flex-col gap-3 group"
                 >
@@ -152,7 +153,7 @@ export const NewsPage = () => {
               <h3 className="font-black uppercase tracking-tighter text-lg mb-6 border-b-2 border-red-600 inline-block">Mais Lidas</h3>
               <div className="space-y-6">
                 {filteredNews.slice(0, 4).map((item, i) => (
-                  <Link to={`/noticias/${item.id}`} key={item.id} className="flex gap-4 group cursor-pointer">
+                  <Link to={newsHref(item.title, item.id)} key={item.id} className="flex gap-4 group cursor-pointer">
                     <span className="text-3xl font-black text-gray-200 group-hover:text-red-600 transition-colors">0{i+1}</span>
                     <p className="text-sm font-bold leading-tight group-hover:text-red-600 transition-colors">
                       {item.title}

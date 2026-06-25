@@ -6,6 +6,7 @@ import { AdBanner } from './AdBanner';
 import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { YouTubeVideo } from '../types';
+import { newsHref } from '../lib/utils';
 
 export const Home = () => {
   const [latestNews, setLatestNews] = useState<any[]>([]);
@@ -130,7 +131,7 @@ export const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
             {latestNews.length > 0 ? latestNews.map((item) => (
-              <Link to={`/noticias/${item.id}`} key={item.id} className="group cursor-pointer">
+              <Link to={newsHref(item.title, item.id)} key={item.id} className="group cursor-pointer">
                 <div className="relative overflow-hidden rounded-xl mb-4 aspect-video">
                   <img 
                     src={item.imageUrl} 
