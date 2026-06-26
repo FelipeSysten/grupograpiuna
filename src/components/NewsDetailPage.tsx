@@ -112,7 +112,7 @@ export const NewsDetailPage = () => {
   }
 
   const getYouTubeId = (url: string): string | null => {
-    const match = url.match(/(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]{11})/);
+    const match = url.match(/(?:youtu\.be\/|live\/|shorts\/|embed\/|v\/|u\/\w\/|watch\?v=|&v=)([A-Za-z0-9_-]{11})/);
     return match ? match[1] : null;
   };
 

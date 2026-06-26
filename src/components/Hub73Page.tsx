@@ -28,8 +28,10 @@ interface HubVideo {
 
 /* ─── Helpers ──────────────────────────────────────────────────────────────── */
 const getYouTubeEmbedUrl = (url: string, autoplay: boolean): string | null => {
+  // Cobre watch?v=, youtu.be/, /embed/, /live/, /shorts/ e /v/.
+  // O ID do YouTube tem sempre 11 caracteres [A-Za-z0-9_-].
   const match = url?.match(
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|live\/|shorts\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/,
   );
   return match
     ? `https://www.youtube.com/embed/${match[1]}?autoplay=${autoplay ? 1 : 0}&rel=0&modestbranding=1`

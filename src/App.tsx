@@ -71,6 +71,8 @@ export default function App() {
             <Route path="/tv" element={<TVPage />} />
             <Route path="/noticias" element={<NewsPage />} />
             <Route path="/noticias/:id" element={<NewsDetailPage />} />
+            <Route path="/aovivo" element={<Hub73Page />} />
+            {/* alias legado — mantém links antigos de /hub73 funcionando */}
             <Route path="/hub73" element={<Hub73Page />} />
             <Route path="/podcasts" element={<PodcastPage />} />
             <Route path="/loja" element={<ShopPage />} />

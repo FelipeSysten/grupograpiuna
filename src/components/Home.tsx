@@ -96,7 +96,7 @@ export const Home = () => {
             {[
               { title: 'TV Grapiúna', icon: Tv, desc: 'Programação local 24h ao vivo.', color: 'bg-red-600', link: '/tv' },
               { title: 'Portal de Notícias', icon: Newspaper, desc: 'O que acontece na região e no mundo.', color: 'bg-blue-600', link: '/noticias' },
-              { title: 'HUB73 Produtora', icon: Video, desc: 'Soluções audiovisuais de alto impacto.', color: 'bg-purple-600', link: '/hub73' },
+              { title: 'HUB73 Produtora', icon: Video, desc: 'Soluções audiovisuais de alto impacto.', color: 'bg-purple-600', link: '/aovivo' },
               { title: 'Rede Podcasts', icon: Mic, desc: 'As melhores conversas estão aqui.', color: 'bg-orange-600', link: '/podcasts' },
             ].map((item, i) => (
               <motion.div 

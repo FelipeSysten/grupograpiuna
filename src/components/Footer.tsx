@@ -32,7 +32,7 @@ export const Footer = () => {
             <ul className="space-y-4 text-sm">
               <li><Link to="/tv" className="hover:text-white transition-colors">TV Grapiúna</Link></li>
               <li><Link to="/noticias" className="hover:text-white transition-colors">Portal de Notícias</Link></li>
-              <li><Link to="/hub73" className="hover:text-white transition-colors">HUB73 Produtora</Link></li>
+              <li><Link to="/aovivo" className="hover:text-white transition-colors">HUB73 Produtora</Link></li>
               <li><Link to="/podcasts" className="hover:text-white transition-colors">Rede de Podcasts</Link></li>
               <li><Link to="/anuncie" className="hover:text-white transition-colors">Anuncie Conosco</Link></li>
             </ul>
