@@ -6,7 +6,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film } from 'lucide-react';
+import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film, Instagram, Heart, MessageCircle } from 'lucide-react';
 
 // Estatísticas do YouTube vêm de dois endpoints separados, com TTLs distintos
 // para respeitar a quota diária da YouTube Data API (10.000 units):
@@ -46,6 +46,42 @@ const fetchYoutubeChannel = async (): Promise<YoutubeChannel> => {
   } catch (err) {
     console.error('[youtube/channel] falha', err);
     return EMPTY_CHANNEL;
+  }
+};
+
+// Instagram — perfil, insights e mídias recentes vêm do serverless /api/instagram/insights
+// (Instagram Graph API). Cache 30min na Vercel; client poll 30min.
+type IgMedia = {
+  id: string; caption: string; mediaType: string; mediaUrl: string;
+  permalink: string; timestamp: string; likes: number; comments: number; views: number;
+};
+type Instagram = {
+  profile: { username: string; name: string; profilePictureUrl: string; followers: number; mediaCount: number };
+  insights: { reach: number; profileViews: number };
+  media: IgMedia[];
+};
+
+const EMPTY_INSTAGRAM: Instagram = {
+  profile: { username: '', name: '', profilePictureUrl: '', followers: 0, mediaCount: 0 },
+  insights: { reach: 0, profileViews: 0 },
+  media: [],
+};
+
+const fetchInstagram = async (): Promise<Instagram> => {
+  try {
+    const res = await fetch('/api/instagram/insights');
+    if (!res.ok) return EMPTY_INSTAGRAM;
+    const data = await res.json();
+    if (data.error) { console.warn('[instagram] error', data.error); return EMPTY_INSTAGRAM; }
+    if (data.errors) console.warn('[instagram] errors', data.errors);
+    return {
+      profile: { ...EMPTY_INSTAGRAM.profile, ...(data.profile ?? {}) },
+      insights: { ...EMPTY_INSTAGRAM.insights, ...(data.insights ?? {}) },
+      media: Array.isArray(data.media) ? data.media : [],
+    };
+  } catch (err) {
+    console.error('[instagram] falha', err);
+    return EMPTY_INSTAGRAM;
   }
 };
 
@@ -134,6 +170,7 @@ export const AdminAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState<YoutubeLive>(EMPTY_LIVE);
   const [channel, setChannel] = useState<YoutubeChannel>(EMPTY_CHANNEL);
+  const [instagram, setInstagram] = useState<Instagram>(EMPTY_INSTAGRAM);
 
   useEffect(() => {
     const unsubStats = onSnapshot(doc(db, 'site_stats', 'global'), (snap) => {
@@ -167,6 +204,18 @@ export const AdminAnalytics = () => {
     const update = async () => {
       const data = await fetchYoutubeChannel();
       if (alive) setChannel(data);
+    };
+    update();
+    const id = setInterval(update, 30 * 60_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  // Instagram — Graph API com rate limit. Edge cache 30min, client poll 30min.
+  useEffect(() => {
+    let alive = true;
+    const update = async () => {
+      const data = await fetchInstagram();
+      if (alive) setInstagram(data);
     };
     update();
     const id = setInterval(update, 30 * 60_000);
@@ -234,6 +283,54 @@ export const AdminAnalytics = () => {
           <StatCard title="Visualizações Totais" value={channel.totalViews}  icon={Eye}   color="bg-red-500" />
           <StatCard title="Vídeos Publicados"    value={channel.videoCount}  icon={Film}  color="bg-red-700" />
         </div>
+      </div>
+
+      {/* ── Instagram ───────────────────────────────────────────────────── */}
+      <div>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 mb-3 flex items-center gap-2">
+          <Instagram size={14} className="text-pink-600" />
+          Instagram {instagram.profile.username ? `· @${instagram.profile.username}` : ''}
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard title="Seguidores"        value={instagram.profile.followers}     icon={Users}      color="bg-pink-600"    />
+          <StatCard title="Publicações"       value={instagram.profile.mediaCount}    icon={Film}       color="bg-fuchsia-600" />
+          <StatCard title="Alcance (dia)"     value={instagram.insights.reach}        icon={TrendingUp} color="bg-purple-600"  />
+          <StatCard title="Visitas ao Perfil" value={instagram.insights.profileViews} icon={Eye}        color="bg-rose-600"    />
+        </div>
+
+        {/* Feed recente */}
+        {instagram.media.length > 0 && (
+          <div className="mt-6 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <h4 className="text-sm font-bold mb-4 flex items-center gap-2 text-gray-700">
+              <Instagram size={16} className="text-pink-600" /> Publicações Recentes
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {instagram.media.map((m) => (
+                <a
+                  key={m.id}
+                  href={m.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative aspect-square rounded-xl overflow-hidden bg-gray-100"
+                >
+                  <img
+                    src={m.mediaUrl}
+                    alt={m.caption ? m.caption.slice(0, 60) : 'Publicação do Instagram'}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 text-white text-xs font-bold">
+                    <span className="flex items-center gap-1"><Heart size={13} /> {m.likes.toLocaleString('pt-BR')}</span>
+                    <span className="flex items-center gap-1"><MessageCircle size={13} /> {m.comments.toLocaleString('pt-BR')}</span>
+                    {m.views > 0 && (
+                      <span className="flex items-center gap-1"><Eye size={13} /> {m.views.toLocaleString('pt-BR')}</span>
+                    )}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Audiência do Site ───────────────────────────────────────────── */}

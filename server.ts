@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { fetchInstagramInsights } from "./api/_lib/instagram";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -102,6 +103,25 @@ async function startServer() {
       });
     } catch (err) {
       console.error("[youtube/channel] exception", err);
+      res.status(500).json({ error: "fetch failed" });
+    }
+  });
+
+  // Espelha api/instagram/insights.ts (Instagram Graph API; cache 30min na Vercel)
+  app.get("/api/instagram/insights", async (_req, res) => {
+    const TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const IG_ID = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+
+    if (!TOKEN || !IG_ID) {
+      res.status(500).json({ error: "Missing INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID" });
+      return;
+    }
+
+    try {
+      const payload = await fetchInstagramInsights(TOKEN, IG_ID);
+      res.status(200).json(payload);
+    } catch (err) {
+      console.error("[instagram/insights] exception", err);
       res.status(500).json({ error: "fetch failed" });
     }
   });
