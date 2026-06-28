@@ -36,11 +36,19 @@ export interface Production {
 
 export interface ScheduleItem {
   id: string;
-  time: string;
-  title: string;
-  host: string;
   dayOfWeek: string;
+  title: string;
+  order?: number;            // ordem do programa dentro do dia
+  category?: string;
+  description?: string;
+  durationSeconds?: number;  // duração em segundos (fonte do cálculo de horários)
   youtubeUrl?: string;
+  thumbnailUrl?: string;
+  status?: string;           // 'ativo' | 'inativo'
+  host?: string;             // apresentador (opcional)
+  startTime?: string;        // 'HH:MM:SS' — calculado e persistido
+  endTime?: string;          // 'HH:MM:SS' — calculado e persistido
+  time?: string;             // legado: horário digitado manualmente
 }
 
 export interface NewsComment {

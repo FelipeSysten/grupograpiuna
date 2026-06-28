@@ -9,6 +9,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, loginWithGoogle } from '../firebase';
 import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { findOnAir, computeDaySchedule } from '../lib/schedule';
 
 const DAYS_FULL = [
   'Segunda-feira',
@@ -36,6 +37,7 @@ type ViewMode = 'normal' | 'theater';
 export const TVPage = () => {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [currentProgram, setCurrentProgram] = useState<ScheduleItem | null>(null);
+  const [onAirProgram, setOnAirProgram] = useState<ScheduleItem | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [liveConfig, setLiveConfig] = useState<any>(null);
   const [selectedChannel, setSelectedChannel] = useState<TVChannel | null>(null);
@@ -98,24 +100,32 @@ export const TVPage = () => {
 
   // ── Schedule ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const q = query(collection(db, 'tv_schedule'), orderBy('time', 'asc'));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(collection(db, 'tv_schedule'), (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleItem));
       setSchedule(data);
-      const now = new Date();
-      const todayName = getDayName(now);
-      const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      const todayItems = data.filter(p => p.dayOfWeek === todayName);
-      const current = [...todayItems].reverse().find(p => p.time <= currentTime) || todayItems[0];
-      if (current) {
-        setCurrentProgram(current);
-        if (current.youtubeUrl && !liveConfig?.active) {
-          setSelectedVideoId(getYouTubeId(current.youtubeUrl));
+      const todayItems = data.filter(p => p.dayOfWeek === getDayName(new Date()));
+      const onAir = findOnAir(todayItems, new Date());
+      setOnAirProgram(onAir);
+      // carrega o programa no ar — sem sobrescrever uma escolha manual do usuário
+      if (onAir) {
+        setCurrentProgram(prev => prev ?? onAir);
+        if (onAir.youtubeUrl && !liveConfig?.active) {
+          setSelectedVideoId(prev => prev ?? getYouTubeId(onAir.youtubeUrl!));
         }
       }
     });
     return () => unsub();
   }, [liveConfig]);
+
+  // ── "No ar agora" — recalcula pela janela [início, fim) a cada 30s ─────────
+  useEffect(() => {
+    const tick = () => {
+      const todayItems = schedule.filter(p => p.dayOfWeek === getDayName(new Date()));
+      setOnAirProgram(findOnAir(todayItems, new Date()));
+    };
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [schedule]);
 
   // ── HLS: carrega stream quando selectedChannel muda ───────────────────────
   // O effect roda APÓS o render, garantindo que videoRef.current já existe.
@@ -551,7 +561,8 @@ export const TVPage = () => {
               ))}
             </div>
           ) : (() => {
-            const dayItems = schedule.filter(p => p.dayOfWeek === selectedDay);
+            const dayItems = computeDaySchedule(schedule.filter(p => p.dayOfWeek === selectedDay));
+            const liveId = selectedDay === TODAY_NAME ? onAirProgram?.id : undefined;
             if (dayItems.length === 0) {
               return (
                 <div className="text-center py-16 text-gray-600">
@@ -562,40 +573,46 @@ export const TVPage = () => {
             }
             return (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {dayItems.map((prog) => (
-                  <button
-                    key={prog.id}
-                    onClick={() => handleProgramClick(prog)}
-                    className={`text-left p-4 rounded-xl border-l-4 transition-all hover:scale-[1.02] text-sm ${
-                      currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME
-                        ? 'bg-red-600/10 border-red-600 shadow-lg shadow-red-900/20'
-                        : 'bg-gray-800 border-gray-700 hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`font-mono font-bold text-sm ${
-                        currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME
-                          ? 'text-red-400'
-                          : 'text-red-500'
-                      }`}>
-                        {prog.time}
-                      </span>
-                      {currentProgram?.id === prog.id && !selectedChannel && selectedDay === TODAY_NAME && (
-                        <span className="flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase tracking-widest">
-                          <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                          Agora
+                {dayItems.map((prog) => {
+                  const isLive = prog.id === liveId;
+                  // legado sem duração → mostra o horário antigo em vez de 00:00
+                  const timeLabel = prog.durationSeconds
+                    ? `${prog.startLabel.slice(0, 5)}–${prog.endLabel.slice(0, 5)}`
+                    : (prog.time || prog.startLabel.slice(0, 5));
+                  return (
+                    <button
+                      key={prog.id}
+                      onClick={() => handleProgramClick(prog)}
+                      className={`text-left p-4 rounded-xl border-l-4 transition-all hover:scale-[1.02] text-sm ${
+                        isLive
+                          ? 'bg-red-600/10 border-red-600 shadow-lg shadow-red-900/20'
+                          : 'bg-gray-800 border-gray-700 hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`font-mono font-bold text-sm ${isLive ? 'text-red-400' : 'text-red-500'}`}>
+                          {timeLabel}
                         </span>
-                      )}
-                    </div>
-                    <h3 className="text-sm font-bold leading-snug line-clamp-2 mb-1">{prog.title}</h3>
-                    <p className="text-gray-400 text-xs line-clamp-1 mb-2">Com {prog.host}</p>
-                    {prog.youtubeUrl && (
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
-                        <Play size={10} fill="currentColor" /> Assistir
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-[9px] font-bold text-red-400 uppercase tracking-widest">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                            No ar agora
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </button>
-                ))}
+                      <h3 className="text-sm font-bold leading-snug line-clamp-2 mb-1">{prog.title}</h3>
+                      {prog.category && (
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">{prog.category}</p>
+                      )}
+                      {prog.host && <p className="text-gray-400 text-xs line-clamp-1 mb-2">Com {prog.host}</p>}
+                      {prog.youtubeUrl && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                          <Play size={10} fill="currentColor" /> Assistir
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             );
           })()}

@@ -203,6 +203,36 @@ async function startServer() {
     }
   });
 
+  // Espelha api/schedule/sheet.ts (proxy CSV do Google Sheets)
+  app.get("/api/schedule/sheet", async (req, res) => {
+    const raw = String((req.query?.id as string) ?? process.env.SCHEDULE_SHEET_ID ?? "").trim();
+    const gid = String((req.query?.gid as string) ?? "0").trim();
+    const match = raw.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const sheetId = match ? match[1] : raw;
+
+    if (!sheetId) {
+      res.status(400).json({ error: "Missing sheet id (?id=) ou SCHEDULE_SHEET_ID" });
+      return;
+    }
+
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${encodeURIComponent(gid)}`;
+    try {
+      const r = await fetch(url, { redirect: "follow" });
+      const text = await r.text();
+      if (!r.ok || /^\s*<(!doctype|html)/i.test(text)) {
+        res.status(502).json({
+          error: 'Não foi possível ler a planilha. Confirme que ela está compartilhada como "qualquer pessoa com o link pode ver".',
+          status: r.status,
+        });
+        return;
+      }
+      res.status(200).json({ csv: text });
+    } catch (err) {
+      console.error("[schedule/sheet] exception", err);
+      res.status(500).json({ error: "fetch failed" });
+    }
+  });
+
   // Mock data for news
   app.get("/api/news", (req, res) => {
     res.json([
