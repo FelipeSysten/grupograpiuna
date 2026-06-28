@@ -6,7 +6,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film, Instagram, Heart, MessageCircle } from 'lucide-react';
+import { Eye, TrendingUp, Smartphone, Monitor, MousePointer2, Youtube, BarChart2, Radio, Users, Film, Instagram, Heart, MessageCircle, CalendarDays } from 'lucide-react';
 
 // Estatísticas do YouTube vêm de dois endpoints separados, com TTLs distintos
 // para respeitar a quota diária da YouTube Data API (10.000 units):
@@ -117,6 +117,22 @@ const pathLabel = (key: string) =>
 const truncate = (str: string, max: number) =>
   str.length > max ? str.substring(0, max) + '…' : str;
 
+// ── Filtro de período (gráfico de acessos diários) ──────────────────────────
+type RangeKey = '7' | '14' | '30' | '60' | '90' | 'custom';
+const RANGE_PRESETS = [7, 14, 30, 60, 90] as const;
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const isoDaysAgo = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+};
+const formatBR = (iso: string) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 const EmptyChart = ({ message = 'Sem dados disponíveis' }: { message?: string }) => (
   <div className="h-64 flex flex-col items-center justify-center text-gray-300 gap-3">
     <BarChart2 size={32} className="opacity-30" />
@@ -171,6 +187,9 @@ export const AdminAnalytics = () => {
   const [live, setLive] = useState<YoutubeLive>(EMPTY_LIVE);
   const [channel, setChannel] = useState<YoutubeChannel>(EMPTY_CHANNEL);
   const [instagram, setInstagram] = useState<Instagram>(EMPTY_INSTAGRAM);
+  const [range, setRange] = useState<RangeKey>('7');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
 
   useEffect(() => {
     const unsubStats = onSnapshot(doc(db, 'site_stats', 'global'), (snap) => {
@@ -224,15 +243,28 @@ export const AdminAnalytics = () => {
 
   if (loading) return <div className="animate-pulse h-96 bg-gray-100 rounded-3xl" />;
 
-  // ── Daily Accesses — sort by YYYY-MM-DD first, then format to DD/MM ────────
+  // ── Daily Accesses — filtra pelo período selecionado, ordena por YYYY-MM-DD ─
   const dailyMap = mergeNestedAndLegacy(stats, 'dailyStats');
+
+  const startISO = range === 'custom'
+    ? (customStart || '0000-01-01')
+    : isoDaysAgo(parseInt(range, 10) - 1);
+  const endISO = range === 'custom'
+    ? (customEnd || todayISO())
+    : todayISO();
+
   const dailyData = Object.entries(dailyMap)
+    .filter(([date]) => date >= startISO && date <= endISO)
     .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14)
     .map(([date, count]) => {
       const [, mm, dd] = date.split('-');
       return { date: `${dd}/${mm}`, count };
     });
+
+  const periodTotal = dailyData.reduce((acc, d) => acc + d.count, 0);
+  const rangeLabel = range === 'custom'
+    ? (customStart && customEnd ? `${formatBR(customStart)} – ${formatBR(customEnd)}` : 'Período personalizado')
+    : `Últimos ${range} dias`;
 
   // ── Top Pages ─────────────────────────────────────────────────────────────
   const pageMap = mergeNestedAndLegacy(stats, 'pageViews');
@@ -269,6 +301,53 @@ export const AdminAnalytics = () => {
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
           DADOS EM TEMPO REAL
         </div>
+      </div>
+
+      {/* ── Filtro de período ───────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-1 flex items-center gap-1.5">
+          <CalendarDays size={13} className="text-red-600" /> Período
+        </span>
+        {RANGE_PRESETS.map((d) => (
+          <button
+            key={d}
+            onClick={() => setRange(String(d) as RangeKey)}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+              range === String(d) ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            {d} dias
+          </button>
+        ))}
+        <button
+          onClick={() => setRange('custom')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+            range === 'custom' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+        >
+          <CalendarDays size={13} /> Personalizado
+        </button>
+
+        {range === 'custom' && (
+          <div className="flex items-center gap-2 ml-1">
+            <input
+              type="date"
+              value={customStart}
+              max={customEnd || todayISO()}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-red-400"
+            />
+            <span className="text-gray-400 text-xs">até</span>
+            <input
+              type="date"
+              value={customEnd}
+              min={customStart || undefined}
+              max={todayISO()}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-red-400"
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Canal YouTube ───────────────────────────────────────────────── */}
@@ -351,10 +430,16 @@ export const AdminAnalytics = () => {
 
         {/* ── Daily Accesses ──────────────────────────────────────────── */}
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-            <TrendingUp size={20} className="text-red-600" /> Acessos Diários (Últimos 14 dias)
-          </h3>
-          {dailyData.length === 0 ? <EmptyChart /> : (
+          <div className="flex items-start justify-between mb-6 gap-4">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <TrendingUp size={20} className="text-red-600" /> Acessos Diários
+            </h3>
+            <div className="text-right shrink-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{rangeLabel}</p>
+              <p className="text-sm font-black text-gray-900">{periodTotal.toLocaleString('pt-BR')} acessos</p>
+            </div>
+          </div>
+          {dailyData.length === 0 ? <EmptyChart message="Sem acessos no período selecionado" /> : (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyData}>
