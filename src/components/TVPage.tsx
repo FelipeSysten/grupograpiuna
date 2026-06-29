@@ -155,8 +155,9 @@ export const TVPage = () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const getYouTubeId = (url: string) => {
-    const match = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/);
-    return match && match[2].length === 11 ? match[2] : null;
+    // Cobre watch?v=, youtu.be/, /live/, /shorts/, /embed/, /v/. ID tem 11 caracteres.
+    const match = url.match(/(?:youtu\.be\/|live\/|shorts\/|embed\/|v\/|u\/\w\/|watch\?v=|&v=)([A-Za-z0-9_-]{11})/);
+    return match ? match[1] : null;
   };
 
   const getYouTubeStart = (url: string): number | null => {
