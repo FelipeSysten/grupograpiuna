@@ -4,6 +4,7 @@ import { Play, Minimize2, Maximize2, Expand } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
+import { AdBanner } from './AdBanner';
 import Hls from 'hls.js';
 
 /* ─── Tipos ────────────────────────────────────────────────────────────────── */
@@ -182,51 +183,69 @@ export const Hub73Page = () => {
             <div className="w-full aspect-video bg-gray-900 rounded-2xl animate-pulse" />
           ) : selectedVideo ? (
             <>
-              {/* Player */}
-              <div className={`transition-all duration-300 ${playerSize === 'sm' ? 'max-w-2xl mx-auto' : 'w-full'}`}>
-                {/* Controles de tamanho */}
-                <div className="flex items-center justify-end gap-1.5 mb-2">
-                  <button
-                    onClick={() => setPlayerSize('sm')}
-                    title="Tela menor"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'sm' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
-                  >
-                    <Minimize2 size={12} /> Menor
-                  </button>
-                  <button
-                    onClick={() => setPlayerSize('lg')}
-                    title="Tela maior"
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'lg' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
-                  >
-                    <Maximize2 size={12} /> Maior
-                  </button>
-                  <button
-                    onClick={handleFullscreen}
-                    title="Tela completa"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest bg-gray-800 text-gray-400 hover:text-white transition-colors"
-                  >
-                    <Expand size={12} /> Completa
-                  </button>
+              {/* Controles de tamanho — centralizados no topo */}
+              <div className="flex items-center justify-center gap-1.5 mb-4">
+                <button
+                  onClick={() => setPlayerSize('sm')}
+                  title="Tela menor"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'sm' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                >
+                  <Minimize2 size={12} /> Menor
+                </button>
+                <button
+                  onClick={() => setPlayerSize('lg')}
+                  title="Tela maior"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-colors ${playerSize === 'lg' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                >
+                  <Maximize2 size={12} /> Maior
+                </button>
+                <button
+                  onClick={handleFullscreen}
+                  title="Tela completa"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                >
+                  <Expand size={12} /> Completa
+                </button>
+              </div>
+
+              {/* Player central ladeado por colunas de banners (desktop) */}
+              <div className="flex gap-6 items-start">
+                {/* Coluna esquerda — 2 banners */}
+                <aside className="hidden lg:flex flex-col gap-6 shrink-0">
+                  <AdBanner size="sidebar" page="hub73" index={0} />
+                  <AdBanner size="sidebar" page="hub73" index={1} />
+                </aside>
+
+                {/* Player */}
+                <div className="flex-1 min-w-0">
+                  <div className={`transition-all duration-300 mx-auto ${playerSize === 'sm' ? 'max-w-3xl' : ''}`}>
+                    <div ref={fsRef} className="w-full bg-black rounded-2xl overflow-hidden border border-gray-800/60 shadow-[0_0_80px_rgba(0,0,0,0.9)]">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={selectedVideo.id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.3, ease: 'easeInOut' }}
+                          className="relative aspect-video w-full bg-black"
+                        >
+                          <VideoPlayer
+                            video={selectedVideo}
+                            autoplay={autoplay}
+                            videoRef={videoRef}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
 
-                <div ref={fsRef} className="w-full bg-black rounded-2xl overflow-hidden border border-gray-800/60 shadow-[0_0_80px_rgba(0,0,0,0.9)]">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={selectedVideo.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3, ease: 'easeInOut' }}
-                      className="relative aspect-video w-full bg-black"
-                    >
-                      <VideoPlayer
-                        video={selectedVideo}
-                        autoplay={autoplay}
-                        videoRef={videoRef}
-                      />
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
+                {/* Coluna direita — 3 banners */}
+                <aside className="hidden lg:flex flex-col gap-6 shrink-0">
+                  <AdBanner size="sidebar" page="hub73" index={2} />
+                  <AdBanner size="sidebar" page="hub73" index={3} />
+                  <AdBanner size="sidebar" page="hub73" index={4} />
+                </aside>
               </div>
 
               {/* Info abaixo do player */}
