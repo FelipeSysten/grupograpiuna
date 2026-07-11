@@ -203,6 +203,40 @@ async function startServer() {
     }
   });
 
+  // Espelha api/instagram/media.ts (mídias recentes para Stories & Reels; cache 15min na Vercel)
+  app.get("/api/instagram/media", async (req, res) => {
+    const TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const IG_ID = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+
+    if (!TOKEN || !IG_ID) {
+      res.status(200).json({ configured: false, media: [] });
+      return;
+    }
+
+    const limit = Math.min(Math.max(parseInt(String(req.query?.limit ?? "12"), 10) || 12, 1), 25);
+
+    try {
+      const fields = "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp";
+      const { ok, data } = await igGet(`${IG_GRAPH}/${IG_ID}/media?fields=${fields}&limit=${limit}&access_token=${TOKEN}`);
+      if (!ok || !Array.isArray(data?.data)) {
+        res.status(200).json({ configured: true, media: [], error: data?.error?.message });
+        return;
+      }
+      const media = data.data.map((item: any) => ({
+        id: item.id,
+        caption: item.caption ?? "",
+        mediaType: item.media_type ?? "",
+        mediaUrl: item.media_type === "VIDEO" ? item.thumbnail_url || item.media_url : item.media_url,
+        permalink: item.permalink ?? "",
+        timestamp: item.timestamp ?? "",
+      }));
+      res.status(200).json({ configured: true, media });
+    } catch (err) {
+      console.error("[instagram/media] exception", err);
+      res.status(500).json({ error: "fetch failed" });
+    }
+  });
+
   // Espelha api/schedule/sheet.ts (proxy CSV do Google Sheets)
   app.get("/api/schedule/sheet", async (req, res) => {
     const raw = String((req.query?.id as string) ?? process.env.SCHEDULE_SHEET_ID ?? "").trim();

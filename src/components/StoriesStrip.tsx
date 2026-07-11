@@ -60,26 +60,78 @@ const getEmbedUrl = (url: string): string | null => {
   return null;
 };
 
+/* ─── Instagram: mídias recentes viram stories automaticamente ─────────────── */
+const igShortcode = (url: string): string | null =>
+  url?.match(/instagram\.com\/(?:reel|p)\/([A-Za-z0-9_-]+)/)?.[1] ?? null;
+
+type IgMedia = {
+  id: string;
+  caption: string;
+  mediaType: string;
+  mediaUrl: string;
+  permalink: string;
+};
+
+const igMediaToStory = (m: IgMedia, i: number): Story => ({
+  id: `ig-${m.id}`,
+  // primeira linha da legenda como título; fallback genérico
+  title: m.caption?.trim() ? m.caption.trim().split('\n')[0].slice(0, 40) : 'Instagram',
+  videoUrl: m.permalink,
+  imageUrl: m.mediaUrl,
+  order: 1000 + i, // depois dos stories manuais
+});
+
 /* ─── Componente principal ────────────────────────────────────────────────── */
 export const StoriesStrip: React.FC = () => {
-  const [stories, setStories] = useState<Story[]>([]);
+  const [manualStories, setManualStories] = useState<Story[]>([]);
+  const [igStories, setIgStories] = useState<Story[]>([]);
   const [seenIds, setSeenIds] = useState<Set<string>>(getSeenIds);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const touchStartX = useRef<number>(0);
 
-  /* ── Firestore ─────────────────────────────────────────────────────────── */
+  /* ── Firestore: stories cadastrados manualmente no admin ──────────────── */
   useEffect(() => {
     const q = query(collection(db, 'news_stories'), orderBy('order', 'asc'));
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setStories(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Story)));
+        setManualStories(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Story)));
       },
       (err) => handleFirestoreError(err, OperationType.LIST, 'news_stories'),
     );
     return () => unsub();
   }, []);
+
+  /* ── Instagram: posts e reels recentes puxados automaticamente ─────────── */
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/instagram/media?limit=15');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!alive || !Array.isArray(data.media)) return;
+        setIgStories(
+          (data.media as IgMedia[])
+            .filter((m) => m.permalink && m.mediaUrl)
+            .map(igMediaToStory),
+        );
+      } catch {
+        /* Instagram não configurado/indisponível → mostra só os manuais */
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  /* ── Mescla: manuais primeiro; do IG entra o que ainda não foi cadastrado ─ */
+  const manualCodes = new Set(
+    manualStories.map((s) => igShortcode(s.videoUrl)).filter(Boolean),
+  );
+  const stories = [
+    ...manualStories,
+    ...igStories.filter((s) => !manualCodes.has(igShortcode(s.videoUrl))),
+  ];
 
   /* ── Lógica de navegação ───────────────────────────────────────────────── */
   const openStory = useCallback(
