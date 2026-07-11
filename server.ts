@@ -203,6 +203,41 @@ async function startServer() {
     }
   });
 
+  // Espelha api/instagram/profile.ts (perfil público para o mockup de celular; cache 30min na Vercel)
+  app.get("/api/instagram/profile", async (_req, res) => {
+    const TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const IG_ID = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+
+    if (!TOKEN || !IG_ID) {
+      res.status(200).json({ configured: false, profile: null });
+      return;
+    }
+
+    try {
+      const fields = "username,name,biography,profile_picture_url,followers_count,follows_count,media_count";
+      const { ok, data } = await igGet(`${IG_GRAPH}/${IG_ID}?fields=${fields}&access_token=${TOKEN}`);
+      if (!ok || !data?.username) {
+        res.status(200).json({ configured: true, profile: null, error: data?.error?.message });
+        return;
+      }
+      res.status(200).json({
+        configured: true,
+        profile: {
+          username: data.username ?? "",
+          name: data.name ?? "",
+          biography: data.biography ?? "",
+          profilePictureUrl: data.profile_picture_url ?? "",
+          followers: data.followers_count ?? 0,
+          follows: data.follows_count ?? 0,
+          mediaCount: data.media_count ?? 0,
+        },
+      });
+    } catch (err) {
+      console.error("[instagram/profile] exception", err);
+      res.status(500).json({ error: "fetch failed" });
+    }
+  });
+
   // Espelha api/instagram/media.ts (mídias recentes para Stories & Reels; cache 15min na Vercel)
   app.get("/api/instagram/media", async (req, res) => {
     const TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;

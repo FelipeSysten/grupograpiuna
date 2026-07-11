@@ -10,6 +10,7 @@ import { db, auth, loginWithGoogle } from '../firebase';
 import { ScheduleItem } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { findOnAir, computeDaySchedule } from '../lib/schedule';
+import { InstagramPhone } from './InstagramPhone';
 
 const DAYS_FULL = [
   'Segunda-feira',
@@ -417,27 +418,31 @@ export const TVPage = () => {
               </div>
             </div>
 
-            {/* Chat column */}
-            <div className={`bg-gray-900 rounded-2xl border border-gray-800 flex overflow-hidden ${
-              isTheater ? 'flex-row h-44' : 'lg:col-span-1 flex-col h-[500px] lg:h-auto'
-            }`}>
+            {/* Instagram — mockup de celular com o perfil (oculto no modo teatro) */}
+            {!isTheater && (
+              <aside className="lg:col-span-1">
+                <InstagramPhone />
+              </aside>
+            )}
+          </div>
 
-              {/* Header (somente modo normal) */}
-              {!isTheater && (
-                <div className="p-4 border-b border-gray-800 flex items-center justify-between shrink-0 bg-gray-900/50 backdrop-blur-sm">
-                  <h3 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
-                    <MessageSquare size={16} className="text-red-600" /> Chat Ao Vivo
-                  </h3>
-                  {user && (
-                    <div className="flex items-center gap-2">
-                      <img src={user.photoURL || ''} className="w-5 h-5 rounded-full" alt="" />
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">{user.displayName?.split(' ')[0]}</span>
-                    </div>
-                  )}
-                </div>
-              )}
+          {/* Chat Ao Vivo — barra horizontal abaixo do player */}
+          <div className="mt-6 bg-gray-900 rounded-2xl border border-gray-800 flex flex-col md:flex-row overflow-hidden h-80 md:h-48">
 
-              {/* Mensagens */}
+            {/* Cabeçalho + mensagens */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between shrink-0 bg-gray-900/50 backdrop-blur-sm">
+                <h3 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest">
+                  <MessageSquare size={16} className="text-red-600" /> Chat Ao Vivo
+                </h3>
+                {user && (
+                  <div className="flex items-center gap-2">
+                    <img src={user.photoURL || ''} className="w-5 h-5 rounded-full" alt="" />
+                    <span className="text-[10px] text-gray-400 font-bold uppercase">{user.displayName?.split(' ')[0]}</span>
+                  </div>
+                )}
+              </div>
+
               <div className="flex-1 p-4 overflow-y-auto space-y-3 text-sm scrollbar-thin scrollbar-thumb-gray-800">
                 {messages.length > 0 ? messages.map((msg, i) => (
                   <div key={msg.id || i} className="flex gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -452,44 +457,35 @@ export const TVPage = () => {
                 )}
                 <div ref={chatEndRef} />
               </div>
+            </div>
 
-              {/* Input */}
-              <div className={`p-4 bg-gray-900/50 ${
-                isTheater
-                  ? 'border-l border-gray-800 w-64 shrink-0 flex flex-col justify-center'
-                  : 'border-t border-gray-800'
-              }`}>
-                {isTheater && (
-                  <h3 className="font-bold flex items-center gap-2 uppercase text-xs tracking-widest mb-3">
-                    <MessageSquare size={14} className="text-red-600" /> Chat
-                  </h3>
-                )}
-                {user ? (
-                  <form onSubmit={handleSendMessage} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Diga algo..."
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-600 transition-colors"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newMessage.trim()}
-                      className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send size={16} />
-                    </button>
-                  </form>
-                ) : (
+            {/* Input */}
+            <div className="p-4 bg-gray-900/50 border-t md:border-t-0 md:border-l border-gray-800 md:w-72 shrink-0 flex flex-col justify-center">
+              {user ? (
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Diga algo..."
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-600 transition-colors"
+                  />
                   <button
-                    onClick={loginWithGoogle}
-                    className="w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                    type="submit"
+                    disabled={!newMessage.trim()}
+                    className="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <LogIn size={16} className="text-red-600" /> ENTRAR PARA COMENTAR
+                    <Send size={16} />
                   </button>
-                )}
-              </div>
+                </form>
+              ) : (
+                <button
+                  onClick={loginWithGoogle}
+                  className="w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                >
+                  <LogIn size={16} className="text-red-600" /> ENTRAR PARA COMENTAR
+                </button>
+              )}
             </div>
           </div>
         </div>
