@@ -1,19 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Play, Youtube, Eye, Minimize2, Maximize2, Expand } from 'lucide-react';
-import {
-  collection,
-  onSnapshot,
-  query,
-  orderBy,
-  limit,
-  updateDoc,
-  doc,
-  increment,
-} from 'firebase/firestore';
+import { Play, Minimize2, Maximize2, Expand } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
-import { YouTubeVideo } from '../types';
 import Hls from 'hls.js';
 
 /* ─── Tipos ────────────────────────────────────────────────────────────────── */
@@ -37,9 +27,6 @@ const getYouTubeEmbedUrl = (url: string, autoplay: boolean): string | null => {
     ? `https://www.youtube.com/embed/${match[1]}?autoplay=${autoplay ? 1 : 0}&rel=0&modestbranding=1`
     : null;
 };
-
-const getYouTubeWatchUrl = (youtubeId: string) =>
-  `https://www.youtube.com/watch?v=${youtubeId}`;
 
 const isHLS = (url?: string) => !!url?.includes('.m3u8');
 
@@ -94,7 +81,6 @@ const VideoPlayer = ({
 /* ─── Componente principal ────────────────────────────────────────────────── */
 export const Hub73Page = () => {
   const [videos, setVideos] = useState<HubVideo[]>([]);
-  const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
   const [filter, setFilter] = useState('Todos');
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<HubVideo | null>(null);
@@ -125,23 +111,6 @@ export const Hub73Page = () => {
         handleFirestoreError(err, OperationType.LIST, 'hub73');
         setLoading(false);
       },
-    );
-    return () => unsub();
-  }, []);
-
-  /* ── Firestore: youtube_videos ─────────────────────────────────────────── */
-  useEffect(() => {
-    const q = query(
-      collection(db, 'youtube_videos'),
-      orderBy('publishedAt', 'desc'),
-      limit(4),
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setYtVideos(snap.docs.map((d) => ({ id: d.id, ...d.data() } as YouTubeVideo)));
-      },
-      (err) => handleFirestoreError(err, OperationType.LIST, 'youtube_videos'),
     );
     return () => unsub();
   }, []);
@@ -188,14 +157,6 @@ export const Hub73Page = () => {
     } else {
       el.requestFullscreen();
     }
-  };
-
-  const incrementViews = async (video: YouTubeVideo) => {
-    try {
-      await updateDoc(doc(db, 'youtube_videos', video.id), {
-        views: increment(1),
-      });
-    } catch { /* silently ignore */ }
   };
 
   const filteredVideos =
@@ -405,79 +366,6 @@ export const Hub73Page = () => {
               })}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          4. VÍDEOS RECENTES — youtube_videos
-      ═════════════════════════════════════════════════════════════════════ */}
-      <section className="bg-gray-950 py-16 border-t border-gray-800">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-
-          {/* Cabeçalho */}
-          <div className="flex items-center justify-between mb-10">
-            <div className="flex items-center gap-4">
-              <Youtube size={26} className="text-red-600" />
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
-                Vídeos <span className="text-red-600">Recentes</span>
-              </h2>
-            </div>
-            <a
-              href="https://www.youtube.com/@PRODUTORAHUB73/podcasts"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
-            >
-              Ver todos no YouTube
-            </a>
-          </div>
-
-          {/* Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {ytVideos.length > 0
-              ? ytVideos.map((video) => (
-                  <motion.a
-                    key={video.id}
-                    href={getYouTubeWatchUrl(video.youtubeId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => incrementViews(video)}
-                    whileHover={{ y: -4 }}
-                    className="group block text-left"
-                  >
-                    <div className="relative aspect-video rounded-xl overflow-hidden mb-3 border border-gray-800">
-                      <img
-                        src={video.thumbnailUrl}
-                        alt={video.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <div className="w-9 h-9 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
-                          <Play size={16} fill="white" color="white" className="ml-0.5" />
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="font-bold text-gray-100 text-sm line-clamp-2 group-hover:text-red-500 transition-colors">
-                      {video.title}
-                    </h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                        {new Date(video.publishedAt).toLocaleDateString('pt-BR')}
-                      </p>
-                      <div className="flex items-center gap-1 text-[10px] text-gray-600 font-bold">
-                        <Eye size={11} /> {video.views ?? 0}
-                      </div>
-                    </div>
-                  </motion.a>
-                ))
-              : [1, 2, 3, 4].map((n) => (
-                  <div key={n} className="space-y-3 animate-pulse">
-                    <div className="aspect-video bg-gray-900 rounded-xl" />
-                    <div className="h-4 bg-gray-900 rounded w-3/4" />
-                    <div className="h-3 bg-gray-900 rounded w-1/4" />
-                  </div>
-                ))}
-          </div>
         </div>
       </section>
     </div>
