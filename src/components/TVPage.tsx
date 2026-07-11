@@ -56,6 +56,8 @@ export const TVPage = () => {
   const hlsRef = useRef<Hls | null>(null);
   const playerWrapperRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const lastYtStateRef = useRef(-1); // último playerState reportado pelo iframe do YouTube
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -127,6 +129,42 @@ export const TVPage = () => {
     return () => clearInterval(id);
   }, [schedule]);
 
+  // ── Auto-avanço da grade: quando o vídeo termina, pula para o próximo ─────
+  // O iframe (com enablejsapi=1) envia o playerState via postMessage; ao detectar
+  // a transição tocando → encerrado (0), avança para o próximo programa do dia
+  // que tenha vídeo, voltando ao primeiro no fim (comportamento de TV).
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin !== 'https://www.youtube.com') return;
+      let data: any;
+      try { data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+      const state = data?.event === 'onStateChange' ? data.info : data?.info?.playerState;
+      if (typeof state !== 'number') return;
+      const prev = lastYtStateRef.current;
+      lastYtStateRef.current = state;
+      if (state !== 0 || ![1, 2, 3].includes(prev)) return; // só transição real para "encerrado"
+
+      // só avança se o vídeo que terminou veio da grade de programação
+      if (!currentProgram?.youtubeUrl || activeChannelName || !selectedVideoId) return;
+      if (getYouTubeId(currentProgram.youtubeUrl) !== selectedVideoId) return;
+
+      const dayItems = computeDaySchedule(schedule.filter(p => p.dayOfWeek === currentProgram.dayOfWeek));
+      const idx = dayItems.findIndex(p => p.id === currentProgram.id);
+      for (let step = 1; step <= dayItems.length; step++) {
+        const next = dayItems[(idx + step) % dayItems.length];
+        const nextId = next.youtubeUrl ? getYouTubeId(next.youtubeUrl) : null;
+        if (nextId && next.id !== currentProgram.id) {
+          setCurrentProgram(next);
+          setSelectedVideoId(nextId);
+          setSelectedVideoStart(null);
+          return;
+        }
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [schedule, currentProgram, selectedVideoId, activeChannelName]);
+
   // ── HLS: carrega stream quando selectedChannel muda ───────────────────────
   // O effect roda APÓS o render, garantindo que videoRef.current já existe.
   useEffect(() => {
@@ -192,6 +230,15 @@ export const TVPage = () => {
     setSelectedVideoStart(null);
     setActiveChannelName(null);
     setCurrentProgram(prog);
+  };
+
+  /** Handshake com o iframe do YouTube para ele passar a enviar o playerState */
+  const handleIframeLoad = () => {
+    lastYtStateRef.current = -1; // novo vídeo carregado → zera o estado
+    iframeRef.current?.contentWindow?.postMessage(
+      JSON.stringify({ event: 'listening', id: 'tv-player', channel: 'widget' }),
+      'https://www.youtube.com',
+    );
   };
 
   /** Tela cheia: usa o wrapper do player para cobrir todo o viewport */
@@ -268,8 +315,10 @@ export const TVPage = () => {
                 {/* YouTube iframe — selectedVideoId tem prioridade sobre liveConfig */}
                 {showIframe && (
                   <iframe
+                    ref={iframeRef}
+                    onLoad={handleIframeLoad}
                     className="absolute inset-0 w-full h-full"
-                    src={`https://www.youtube.com/embed/${selectedVideoId ?? (liveConfig?.active ? getYouTubeId(liveConfig.url) : null)}?autoplay=1${selectedVideoStart ? `&start=${selectedVideoStart}` : ''}`}
+                    src={`https://www.youtube.com/embed/${selectedVideoId ?? (liveConfig?.active ? getYouTubeId(liveConfig.url) : null)}?autoplay=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}${selectedVideoStart ? `&start=${selectedVideoStart}` : ''}`}
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
